@@ -23,8 +23,10 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
 
   // Master Screen Navigation Flow:
   const [currentScreen, setCurrentScreen] = useState<
-    'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen'
+    'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen' | 'notifications_screen'
   >('dashboard');
+
+  const [notificationFilter, setNotificationFilter] = useState<'all' | 'orders' | 'offers'>('all');
 
   // File Upload State (Screen 1)
   const [allowedFileType, setAllowedFileType] = useState<'all' | 'pdf' | 'image'>('all');
@@ -69,9 +71,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // =========================================================================================
   // REAL-TIME USER ACCOUNT SETTINGS DATA STATES
-  // =========================================================================================
   const [profileData, setProfileData] = useState({
     name: user?.name || 'Kaushav Sharma',
     email: user?.email || 'kaushav@example.com',
@@ -354,7 +354,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
 
               <div className="relative">
                 <button 
-                  onClick={() => setActiveModal('notifications')}
+                  onClick={() => setCurrentScreen('notifications_screen')}
                   className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 relative hover:bg-slate-50 transition-all cursor-pointer shadow-sm active:scale-95 bg-white"
                 >
                   <Bell className="w-5 h-5 text-slate-600" />
@@ -496,19 +496,152 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         )}
 
         {/* ========================================================================================= */}
-        {/* SCREEN: MY PROFILE */}
+        {/* SCREEN: NOTIFICATIONS (FULL SCREEN WITH TOP BACK ARROW) */}
+        {/* ========================================================================================= */}
+        {currentScreen === 'notifications_screen' && (
+          <div className="space-y-6 animate-fade-in text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setCurrentScreen('dashboard')}
+                  className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                    Alerts & Notifications
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium">Real-time updates, order dispatches, and offer alerts</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => showToast('All notifications marked as read!')}
+                className="text-xs font-bold text-[#16A34A] hover:underline"
+              >
+                Mark all as read
+              </button>
+            </div>
+
+            {/* Category Filter Tabs */}
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              {[
+                { id: 'all', label: 'All (5)' },
+                { id: 'orders', label: 'Orders (3)' },
+                { id: 'offers', label: 'Offers & Rewards (2)' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setNotificationFilter(tab.id as any)}
+                  className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer ${notificationFilter === tab.id ? 'bg-[#16A34A] text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Notifications Cards List */}
+            <div className="space-y-3">
+              {[
+                {
+                  id: 1,
+                  type: 'orders',
+                  title: '🎉 Order Delivered!',
+                  desc: 'Order #PRN-6582 (Spiral Bound Notes) has been delivered to 248, Rajpur Road, Dehradun.',
+                  time: '10 mins ago',
+                  unread: true,
+                  icon: CheckCircle2,
+                  iconBg: 'bg-emerald-50 text-[#16A34A]'
+                },
+                {
+                  id: 2,
+                  type: 'orders',
+                  title: '⚙️ Printing Started',
+                  desc: 'Order #PRT00054 is currently printing at InkJet Pro Studio line #3.',
+                  time: '1 hour ago',
+                  unread: true,
+                  icon: Printer,
+                  iconBg: 'bg-blue-50 text-blue-600'
+                },
+                {
+                  id: 3,
+                  type: 'offers',
+                  title: '🏷️ ₹10 Cashback Coupon Added!',
+                  desc: 'Use promo code PRINTFIRST on your next print order of ₹30 or more.',
+                  time: '3 hours ago',
+                  unread: false,
+                  icon: Ticket,
+                  iconBg: 'bg-purple-50 text-purple-600'
+                },
+                {
+                  id: 4,
+                  type: 'orders',
+                  title: '📦 Order #PRT00053 Dispatched',
+                  desc: 'Delivery partner has picked up your print package. Expected delivery 2PM.',
+                  time: 'Yesterday',
+                  unread: false,
+                  icon: FileText,
+                  iconBg: 'bg-amber-50 text-amber-600'
+                },
+                {
+                  id: 5,
+                  type: 'offers',
+                  title: '👛 Wallet Top-Up Successful',
+                  desc: '₹500 added to your PrintNest wallet balance via Razorpay UPI.',
+                  time: '2 days ago',
+                  unread: false,
+                  icon: Wallet,
+                  iconBg: 'bg-emerald-50 text-[#16A34A]'
+                }
+              ]
+              .filter(item => notificationFilter === 'all' || item.type === notificationFilter)
+              .map((notif) => (
+                <div 
+                  key={notif.id} 
+                  className={`p-4 rounded-2xl border flex items-start justify-between gap-4 transition-all ${notif.unread ? 'bg-white border-[#86efac]/80 shadow-xs' : 'bg-slate-50/70 border-slate-100'}`}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div className={`w-10 h-10 rounded-2xl ${notif.iconBg} flex items-center justify-center shrink-0`}>
+                      <notif.icon className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-extrabold text-slate-900">{notif.title}</h4>
+                        {notif.unread && <span className="w-2 h-2 bg-[#16A34A] rounded-full"></span>}
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{notif.desc}</p>
+                      <span className="text-[9.5px] text-slate-400 font-bold block pt-1">{notif.time}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================================= */}
+        {/* SCREEN: MY PROFILE (WITH TOP BACK ARROW) */}
         {/* ========================================================================================= */}
         {currentScreen === 'profile_screen' && (
           <div className="space-y-6 animate-fade-in text-left">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 font-sans">My Profile</h2>
-                <p className="text-xs text-slate-400 font-medium">Manage your account and preferences</p>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setCurrentScreen('dashboard')}
+                  className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900 font-sans">My Profile</h2>
+                  <p className="text-xs text-slate-400 font-medium">Manage your account and preferences</p>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => setActiveModal('notifications')}
+                  onClick={() => setCurrentScreen('notifications_screen')}
                   className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 relative hover:bg-slate-50 bg-white"
                 >
                   <Bell className="w-5 h-5 text-slate-600" />
@@ -585,7 +718,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
-            {/* FULLY FUNCTIONAL ACCOUNT SETTINGS LIST */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 shadow-sm">
                 <h4 className="text-sm font-extrabold text-slate-900">Account Settings</h4>
@@ -649,7 +781,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                           <span className="text-base font-extrabold text-slate-900 font-mono">5</span>
                         </div>
                       </div>
-                      <button onClick={() => setActiveModal('notifications')} className="w-full py-2 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                      <button onClick={() => setCurrentScreen('notifications_screen')} className="w-full py-2 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer">
                         View Rewards
                       </button>
                     </div>
@@ -714,7 +846,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
 
               <button 
-                onClick={() => setActiveModal('notifications')}
+                onClick={() => setCurrentScreen('notifications_screen')}
                 className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 relative hover:bg-slate-50 cursor-pointer bg-white"
               >
                 <Bell className="w-5 h-5 text-slate-600" />
@@ -1204,10 +1336,10 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </button>
 
         <button
-          onClick={() => setActiveModal('notifications')}
-          className="flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          onClick={() => setCurrentScreen('notifications_screen')}
+          className={`flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl cursor-pointer ${currentScreen === 'notifications_screen' ? 'text-[#16A34A] font-bold' : 'text-slate-400'}`}
         >
-          <Bell className="w-4.5 h-4.5 shrink-0" />
+          <Bell className="w-4.5 h-4.5 shrink-0 fill-current" />
           <span className="text-[8px] font-extrabold tracking-wide uppercase leading-none">Notifications</span>
         </button>
 
@@ -1219,20 +1351,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
           <span className="text-[8px] font-extrabold tracking-wide uppercase leading-none">Profile</span>
         </button>
       </nav>
-
-      {/* Notifications Modal */}
-      {activeModal === 'notifications' && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
-            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
-            <div className="flex items-center gap-2"><Bell className="w-5 h-5 text-[#16A34A]" /><h3 className="text-base font-bold text-slate-900">Alerts & Notifications</h3></div>
-            <div className="space-y-2.5">
-              <div className="p-3 bg-slate-50 rounded-2xl border text-xs"><span className="font-bold text-slate-800">🎉 Order Delivered!</span><p className="text-[10px] text-slate-500">Order #PRN-6582 binding finalized.</p></div>
-              <div className="p-3 bg-slate-50 rounded-2xl border text-xs"><span className="font-bold text-slate-800">⚙️ Printing Progress</span><p className="text-[10px] text-slate-500">Order #PRT00054 is currently printing.</p></div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ADMIN PANEL CONSOLE MODAL */}
       {activeModal === 'admin' && (
@@ -1291,9 +1409,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </div>
       )}
 
-      {/* ========================================================================================= */}
       {/* 1. PERSONAL INFORMATION MODAL */}
-      {/* ========================================================================================= */}
       {activeModal === 'edit_personal_info' && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
@@ -1361,9 +1477,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </div>
       )}
 
-      {/* ========================================================================================= */}
       {/* 2. ADDRESSES MODAL */}
-      {/* ========================================================================================= */}
       {activeModal === 'edit_addresses' && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
@@ -1429,9 +1543,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </div>
       )}
 
-      {/* ========================================================================================= */}
       {/* 3. PAYMENT METHODS MODAL */}
-      {/* ========================================================================================= */}
       {activeModal === 'edit_payment_methods' && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
@@ -1479,9 +1591,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </div>
       )}
 
-      {/* ========================================================================================= */}
       {/* 4. PRINT PREFERENCES MODAL */}
-      {/* ========================================================================================= */}
       {activeModal === 'edit_print_preferences' && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
@@ -1544,9 +1654,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </div>
       )}
 
-      {/* ========================================================================================= */}
       {/* 5. NOTIFICATION PREFERENCES MODAL */}
-      {/* ========================================================================================= */}
       {activeModal === 'edit_notifications' && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
@@ -1590,9 +1698,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </div>
       )}
 
-      {/* ========================================================================================= */}
       {/* 6. SECURITY SETTINGS MODAL */}
-      {/* ========================================================================================= */}
       {activeModal === 'edit_security' && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">

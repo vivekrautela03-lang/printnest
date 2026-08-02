@@ -6,10 +6,11 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'admin' | 'staff' | 'delivery_partner';
   walletBalance: number;
   referralCode: string;
   rewardsPoints: number;
+  phone?: string;
 }
 
 export interface WalletTransaction {
@@ -25,21 +26,21 @@ export interface SavedFile {
   name: string;
   size: string;
   pages: number;
-  type: string; // e.g. 'pdf' or 'image'
+  type: string;
   uploadDate: string;
-  previewUrl?: string; // Data URL or object URL
+  previewUrl?: string;
 }
 
 export interface PrintConfig {
   copies: number;
-  paperSize: 'A4' | 'A3' | 'A5' | 'Letter';
+  paperSize: 'A4' | 'A3' | 'Legal' | 'Letter';
   gsm: 75 | 85 | 100 | 120;
-  printType: 'black-white' | 'color';
-  binding: 'none' | 'spiral' | 'hard-binding' | 'soft-binding';
+  printType: 'bw' | 'color';
+  binding: 'none' | 'spiral' | 'hard' | 'soft' | 'staple';
   lamination: boolean;
   doubleSided: boolean;
-  pageRange: string; // 'all' or '1-5' etc.
-  deliverySpeed: 'standard' | 'express' | 'super-express';
+  pageRange: string;
+  deliverySpeed: 'standard' | 'express';
   cost: number;
 }
 
@@ -53,524 +54,420 @@ export interface CartItem {
 
 export interface Order {
   id: string;
+  orderCode: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
   date: string;
   items: CartItem[];
   subtotal: number;
   discount: number;
   deliveryCost: number;
   total: number;
-  status: 'Received' | 'Printing' | 'Binding' | 'Packaging' | 'Out for Delivery' | 'Delivered';
-  paymentMethod: 'wallet' | 'card' | 'upi';
+  status: 'Received' | 'Printing' | 'Binding' | 'Packaging' | 'Ready for Pickup' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
+  paymentMethod: 'wallet' | 'card' | 'upi' | 'cash';
+  paymentStatus: 'Paid' | 'Pending' | 'Refunded';
   address: string;
-  currentPrinterId?: string;
-  printProgress?: number; // 0 to 100
+  assignedDeliveryPartner?: string;
+  printProgress?: number;
 }
 
-export interface Printer {
+export interface ServiceItem {
+  id: string;
+  title: string;
+  category: string;
+  pricePerPage: number;
+  colorPrice: number;
+  isEnabled: boolean;
+  paperSizes: string[];
+}
+
+export interface ManagedCustomer {
   id: string;
   name: string;
-  status: 'idle' | 'printing' | 'offline';
-  activeJobId?: string;
-  progress?: number;
-  type: 'inkjet' | 'laser' | 'plotter';
+  email: string;
+  phone: string;
+  totalOrders: number;
+  spentRevenue: number;
+  isBlocked: boolean;
+  joinDate: string;
 }
 
-export interface ChatMessage {
+export interface DeliveryPartner {
   id: string;
-  sender: 'user' | 'bot';
-  text: string;
-  timestamp: string;
+  name: string;
+  phone: string;
+  status: 'Online' | 'Offline' | 'Busy';
+  assignedOrderCount: number;
 }
 
-export interface Coupon {
+export interface CouponItem {
+  id: string;
   code: string;
-  discountPercent: number;
-  description: string;
+  discountType: 'percentage' | 'flat';
+  discountValue: number;
+  minOrderValue: number;
+  usageCount: number;
+  isActive: boolean;
+  expiryDate: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: 'Paper' | 'Ink' | 'Binding Materials';
+  stockQuantity: number;
+  lowStockThreshold: number;
+  unit: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  type: 'order' | 'promo' | 'system';
+  isRead: boolean;
 }
 
 interface AppState {
   // Auth
   user: UserProfile | null;
-  setUserRole: (role: 'customer' | 'admin') => void;
+  setUserRole: (role: 'customer' | 'admin' | 'staff' | 'delivery_partner') => void;
   updateProfile: (name: string, email: string) => void;
   
   // Wallet
   transactions: WalletTransaction[];
   topUpWallet: (amount: number) => void;
   
-  // Saved Files
-  savedFiles: SavedFile[];
-  addSavedFile: (file: Omit<SavedFile, 'id' | 'uploadDate'>) => string;
-  deleteSavedFile: (id: string) => void;
+  // File Management
+  files: SavedFile[];
+  addFile: (file: SavedFile) => void;
+  deleteFile: (id: string) => void;
   
-  // Cart & Configurations
+  // Cart
   cart: CartItem[];
-  addToCart: (fileId: string, fileName: string, pages: number, config: PrintConfig) => void;
-  removeFromCart: (itemId: string) => void;
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (id: string) => void;
   clearCart: () => void;
-  appliedCoupon: Coupon | null;
-  applyCoupon: (code: string) => boolean;
-  removeCoupon: () => void;
-  
-  // Pricing Constants (controlled by admin)
-  basePageRates: {
-    'black-white': number;
-    'color': number;
-  };
-  paperSizeMultipliers: Record<string, number>;
-  gsmRates: Record<number, number>;
-  bindingRates: Record<string, number>;
-  laminationRate: number;
-  deliveryRates: {
-    'standard': number;
-    'express': number;
-    'super-express': number;
-  };
-  updatePricing: (rates: Partial<AppState['basePageRates'] & { bindingRates: any, deliveryRates: any }>) => void;
-  
-  // Coupons list
-  availableCoupons: Coupon[];
-  addCoupon: (coupon: Coupon) => void;
   
   // Orders
   orders: Order[];
-  placeOrder: (paymentMethod: 'wallet' | 'card' | 'upi', address: string) => Order | null;
-  updateOrderStatus: (orderId: string, status: Order['status']) => void;
-  
-  // Printers
-  printers: Printer[];
-  togglePrinterOnline: (printerId: string) => void;
-  
-  // Chat
-  chatMessages: ChatMessage[];
-  sendChatMessage: (text: string) => void;
-  
-  // Admin analytics and logs
-  adminLogs: string[];
-  addAdminLog: (log: string) => void;
-  
-  // Background printing tick simulator
-  tickPrinters: () => void;
+  placeOrder: (paymentMethod: 'wallet' | 'card' | 'upi', address: string) => string;
+  updateOrderStatus: (orderId: string, newStatus: Order['status']) => void;
+
+  // Admin Managed Services
+  services: ServiceItem[];
+  addService: (service: Omit<ServiceItem, 'id'>) => void;
+  updateService: (id: string, updatedData: Partial<ServiceItem>) => void;
+  deleteService: (id: string) => void;
+  toggleServiceStatus: (id: string) => void;
+
+  // Admin Customer Directory
+  customersList: ManagedCustomer[];
+  toggleBlockCustomer: (customerId: string) => void;
+
+  // Admin Delivery Partners
+  deliveryPartners: DeliveryPartner[];
+  updatePartnerStatus: (partnerId: string, status: DeliveryPartner['status']) => void;
+  assignOrderToPartner: (orderId: string, partnerId: string) => void;
+
+  // Admin Coupons
+  couponsList: CouponItem[];
+  addCoupon: (coupon: Omit<CouponItem, 'id' | 'usageCount'>) => void;
+  deleteCoupon: (code: string) => void;
+
+  // Admin Inventory
+  inventoryItems: InventoryItem[];
+  updateInventoryStock: (itemId: string, newQuantity: number) => void;
+
+  // Real-time Notifications
+  notifications: AppNotification[];
+  addNotification: (notification: Omit<AppNotification, 'id' | 'isRead'>) => void;
+  markNotificationsRead: () => void;
 }
 
-// Initial Mock Data
-const INITIAL_USER: UserProfile = {
-  id: 'usr_1',
-  name: 'Kaushav',
-  email: 'kaushav@printnest.com',
-  role: 'customer',
-  walletBalance: 1250,
-  referralCode: 'PRINT-KSH99',
-  rewardsPoints: 320,
-};
-
-const INITIAL_TRANSACTIONS: WalletTransaction[] = [
-  { id: 'tx_1', type: 'credit', amount: 1500, description: 'Wallet loaded via Razorpay', date: '2026-07-28T14:30:00Z' },
-  { id: 'tx_2', type: 'debit', amount: 250, description: 'Payment for Order #PRN-6582', date: '2026-07-28T15:00:00Z' },
-];
-
-const INITIAL_FILES: SavedFile[] = [
-  { id: 'file_1', name: 'Resume_Engineering_2026.pdf', size: '245 KB', pages: 2, type: 'pdf', uploadDate: '2026-07-29T10:15:00Z' },
-  { id: 'file_2', name: 'Marketing_Flyer_Final.png', size: '1.8 MB', pages: 1, type: 'image', uploadDate: '2026-07-30T12:00:00Z' },
-  { id: 'file_3', name: 'Thesis_Draft_V4.pdf', size: '4.2 MB', pages: 48, type: 'pdf', uploadDate: '2026-07-31T09:45:00Z' },
-];
-
-const INITIAL_PRINTERS: Printer[] = [
-  { id: 'prn_1', name: 'FastLaser Alpha (A4 Heavy Duty)', status: 'idle', type: 'laser' },
-  { id: 'prn_2', name: 'InkJet Pro Color Studio', status: 'idle', type: 'inkjet' },
-  { id: 'prn_3', name: 'Plotter Max (Flex & Posters)', status: 'idle', type: 'plotter' },
-];
-
-const INITIAL_COUPONS: Coupon[] = [
-  { code: 'PRINTFIRST', discountPercent: 20, description: '20% off on your first order' },
-  { code: 'SUPERBIND', discountPercent: 15, description: '15% off binding and laminations' },
-  { code: 'FREESHIP', discountPercent: 10, description: '10% off shipping and print orders' },
-];
-
 export const useAppStore = create<AppState>((set, get) => ({
-  user: INITIAL_USER,
-  transactions: INITIAL_TRANSACTIONS,
-  savedFiles: INITIAL_FILES,
+  // Default User State
+  user: {
+    id: 'usr-101',
+    name: 'Kaushav Sharma',
+    email: 'kaushav@example.com',
+    role: 'customer',
+    walletBalance: 1250.00,
+    referralCode: 'PRINTNEST100',
+    rewardsPoints: 450,
+    phone: '+91 98765 43210'
+  },
+
+  setUserRole: (role) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, role } : null
+    }));
+  },
+
+  updateProfile: (name, email) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, name, email } : {
+        id: 'usr-101',
+        name,
+        email,
+        role: 'customer',
+        walletBalance: 1250,
+        referralCode: 'PRINTNEST100',
+        rewardsPoints: 450
+      }
+    }));
+  },
+
+  // Wallet
+  transactions: [
+    { id: 'tx-1', type: 'credit', amount: 500, description: 'Wallet Top-Up via Razorpay UPI', date: '10 May 2024' },
+    { id: 'tx-2', type: 'debit', amount: 216, description: 'Paid for Order #PRT00054', date: '12 May 2024' }
+  ],
+
+  topUpWallet: (amount) => {
+    set((state) => {
+      if (!state.user) return state;
+      const updatedBalance = state.user.walletBalance + amount;
+      const newTx: WalletTransaction = {
+        id: `tx-${Date.now()}`,
+        type: 'credit',
+        amount,
+        description: 'Wallet Credit Top-Up',
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+      return {
+        user: { ...state.user, walletBalance: updatedBalance },
+        transactions: [newTx, ...state.transactions]
+      };
+    });
+  },
+
+  // Files
+  files: [
+    { id: 'f-1', name: 'Notes_Document.pdf', size: '2.4 MB', pages: 12, type: 'pdf', uploadDate: '12 May 2024' }
+  ],
+
+  addFile: (file) => set((state) => ({ files: [file, ...state.files] })),
+  deleteFile: (id) => set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
+
+  // Cart
   cart: [],
-  appliedCoupon: null,
+  addToCart: (item) => set((state) => ({ cart: [...state.cart, item] })),
+  removeFromCart: (id) => set((state) => ({ cart: state.cart.filter((i) => i.id !== id) })),
+  clearCart: () => set({ cart: [] }),
+
+  // Initial Sample Orders
   orders: [
     {
-      id: 'PRT00054',
-      date: '2024-05-12T10:00:00Z', // 12 May 2024
+      id: 'ord-101',
+      orderCode: 'PRT00054',
+      customerName: 'Kaushav Sharma',
+      customerEmail: 'kaushav@example.com',
+      customerPhone: '+91 98765 43210',
+      date: '12 May 2024',
       items: [
         {
-          id: 'cart_item_mock',
-          fileId: 'file_1',
-          fileName: 'Document.pdf',
+          id: 'item-1',
+          fileId: 'f-1',
+          fileName: 'Notes_Document.pdf',
           pages: 12,
           config: {
-            copies: 2,
+            copies: 1,
             paperSize: 'A4',
             gsm: 75,
-            printType: 'black-white',
+            printType: 'bw',
             binding: 'spiral',
             lamination: false,
             doubleSided: true,
             pageRange: 'all',
             deliverySpeed: 'standard',
-            cost: 216,
+            cost: 216
           }
         }
       ],
-      subtotal: 176,
+      subtotal: 206,
       discount: 0,
-      deliveryCost: 40,
+      deliveryCost: 10,
       total: 216,
       status: 'Printing',
+      paymentMethod: 'upi',
+      paymentStatus: 'Paid',
+      address: '248, Rajpur Road, Dehradun, Uttarakhand - 248001'
+    },
+    {
+      id: 'ord-102',
+      orderCode: 'PRT00053',
+      customerName: 'Aarav Mehta',
+      customerEmail: 'aarav@example.com',
+      customerPhone: '+91 98123 45678',
+      date: '10 May 2024',
+      items: [],
+      subtotal: 128,
+      discount: 10,
+      deliveryCost: 10,
+      total: 128,
+      status: 'Delivered',
       paymentMethod: 'card',
-      address: '123 SaaS Street, Tech Hub, Bangalore',
+      paymentStatus: 'Paid',
+      address: 'Campus Hostel Block B, UPES Dehradun'
     }
   ],
-  printers: INITIAL_PRINTERS,
-  availableCoupons: INITIAL_COUPONS,
-  chatMessages: [
-    { id: 'msg_1', sender: 'bot', text: 'Hi! I am your AI Printing Assistant. How can I help you today? You can ask me about binder sizes, print costs, or upload a resume to write a cover letter!', timestamp: new Date().toISOString() },
-  ],
-  adminLogs: [
-    'System initialized.',
-    'Laser Printer FastLaser Alpha online.',
-    'InkJet Pro Color Studio ready.'
-  ],
-  
-  // Pricing Constants
-  basePageRates: {
-    'black-white': 2, // 2 Rs per page
-    'color': 8, // 8 Rs per page
-  },
-  paperSizeMultipliers: {
-    'A4': 1.0,
-    'A3': 2.0,
-    'A5': 0.8,
-    'Letter': 1.1,
-  },
-  gsmRates: {
-    75: 0,
-    85: 0.5,
-    100: 1.5,
-    120: 3.0,
-  },
-  bindingRates: {
-    'none': 0,
-    'spiral': 40,
-    'hard-binding': 150,
-    'soft-binding': 90,
-  },
-  laminationRate: 20,
-  deliveryRates: {
-    'standard': 40,
-    'express': 90,
-    'super-express': 180,
-  },
 
-  // Auth Operations
-  setUserRole: (role) => set((state) => {
-    if (!state.user) return {};
-    return { user: { ...state.user, role } };
-  }),
-  
-  updateProfile: (name, email) => set((state) => {
-    if (!state.user) return {};
-    return { user: { ...state.user, name, email } };
-  }),
-
-  // Wallet
-  topUpWallet: (amount) => set((state) => {
-    if (!state.user) return {};
-    const newTx: WalletTransaction = {
-      id: `tx_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'credit',
-      amount,
-      description: 'Wallet top-up approved (Razorpay Simulation)',
-      date: new Date().toISOString(),
-    };
-    return {
-      user: { ...state.user, walletBalance: state.user.walletBalance + amount },
-      transactions: [newTx, ...state.transactions],
-    };
-  }),
-
-  // Files
-  addSavedFile: (fileData) => {
-    const id = `file_${Math.random().toString(36).substr(2, 9)}`;
-    const newFile: SavedFile = {
-      ...fileData,
-      id,
-      uploadDate: new Date().toISOString(),
-    };
-    set((state) => ({ savedFiles: [newFile, ...state.savedFiles] }));
-    return id;
-  },
-  
-  deleteSavedFile: (id) => set((state) => ({
-    savedFiles: state.savedFiles.filter(f => f.id !== id)
-  })),
-
-  // Cart
-  addToCart: (fileId, fileName, pages, config) => set((state) => {
-    const newItem: CartItem = {
-      id: `cart_${Math.random().toString(36).substr(2, 9)}`,
-      fileId,
-      fileName,
-      pages,
-      config,
-    };
-    return { cart: [...state.cart, newItem] };
-  }),
-  
-  removeFromCart: (itemId) => set((state) => ({
-    cart: state.cart.filter(item => item.id !== itemId)
-  })),
-  
-  clearCart: () => set({ cart: [], appliedCoupon: null }),
-  
-  applyCoupon: (code) => {
-    const coupon = get().availableCoupons.find(c => c.code.toUpperCase() === code.toUpperCase());
-    if (coupon) {
-      set({ appliedCoupon: coupon });
-      return true;
-    }
-    return false;
-  },
-  
-  removeCoupon: () => set({ appliedCoupon: null }),
-
-  // Pricing edits
-  updatePricing: (rates) => set((state) => ({
-    basePageRates: { ...state.basePageRates, ...rates },
-    bindingRates: { ...state.bindingRates, ...rates.bindingRates },
-    deliveryRates: { ...state.deliveryRates, ...rates.deliveryRates }
-  })),
-
-  // Coupon manager
-  addCoupon: (coupon) => set((state) => ({
-    availableCoupons: [coupon, ...state.availableCoupons]
-  })),
-
-  // Orders Checkout
   placeOrder: (paymentMethod, address) => {
-    const { cart, appliedCoupon, user, transactions, deliveryRates } = get();
-    if (cart.length === 0 || !user) return null;
-
-    // Calculate subtotal
-    const subtotal = cart.reduce((sum, item) => sum + item.config.cost, 0);
-    const discount = appliedCoupon ? Math.round(subtotal * (appliedCoupon.discountPercent / 100)) : 0;
-    
-    // Delivery cost is determined by the highest selected speed in the cart items
-    let maxSpeed: PrintConfig['deliverySpeed'] = 'standard';
-    cart.forEach(item => {
-      if (item.config.deliverySpeed === 'super-express') maxSpeed = 'super-express';
-      else if (item.config.deliverySpeed === 'express' && maxSpeed === 'standard') maxSpeed = 'express';
-    });
-    
-    const deliveryCost = deliveryRates[maxSpeed];
-    const total = subtotal - discount + deliveryCost;
-
-    // Wallet check
-    if (paymentMethod === 'wallet' && user.walletBalance < total) {
-      return null; // Insufficient funds
-    }
-
-    // Deduct wallet balance if payment is wallet
-    if (paymentMethod === 'wallet') {
-      const walletTx: WalletTransaction = {
-        id: `tx_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'debit',
-        amount: total,
-        description: `Payment for Order #PRN-${Math.floor(1000 + Math.random() * 9000)}`,
-        date: new Date().toISOString(),
-      };
-      set({
-        user: { ...user, walletBalance: user.walletBalance - total, rewardsPoints: user.rewardsPoints + Math.round(total / 10) },
-        transactions: [walletTx, ...transactions]
-      });
-    } else {
-      // Direct card/upi adds rewards points too
-      set({
-        user: { ...user, rewardsPoints: user.rewardsPoints + Math.round(total / 10) }
-      });
-    }
-
-    const orderId = `PRN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const { cart, user } = get();
+    const orderId = `PRT${Math.floor(10000 + Math.random() * 90000)}`;
+    const subtotal = cart.reduce((acc, i) => acc + i.config.cost, 100);
     const newOrder: Order = {
-      id: orderId,
-      date: new Date().toISOString(),
+      id: `ord-${Date.now()}`,
+      orderCode: orderId,
+      customerName: user?.name || 'Kaushav Sharma',
+      customerEmail: user?.email || 'kaushav@example.com',
+      customerPhone: user?.phone || '+91 98765 43210',
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       items: [...cart],
       subtotal,
-      discount,
-      deliveryCost,
-      total,
+      discount: 0,
+      deliveryCost: 10,
+      total: subtotal + 10,
       status: 'Received',
       paymentMethod,
-      address,
+      paymentStatus: 'Paid',
+      address
     };
 
     set((state) => ({
       orders: [newOrder, ...state.orders],
-      cart: [],
-      appliedCoupon: null,
-      adminLogs: [`New Order #${orderId} received. Total: Rs. ${total}. (Synced to Supabase)`, ...state.adminLogs]
+      cart: []
     }));
 
-    // Async sync to Supabase project https://pmacffojqzhajirdqnyy.supabase.co
+    // Trigger Supabase Cloud Sync
     syncOrderToSupabase(newOrder);
 
-    return newOrder;
+    return orderId;
   },
 
-  updateOrderStatus: (orderId, status) => set((state) => {
-    const updatedOrders = state.orders.map(order => 
-      order.id === orderId ? { ...order, status } : order
-    );
-    return {
-      orders: updatedOrders,
-      adminLogs: [`Order #${orderId} status changed to ${status}.`, ...state.adminLogs]
-    };
-  }),
+  // Real-Time Admin Order Status Updater
+  updateOrderStatus: (orderId, newStatus) => {
+    set((state) => {
+      const updatedOrders = state.orders.map((ord) => 
+        ord.id === orderId || ord.orderCode === orderId ? { ...ord, status: newStatus } : ord
+      );
 
-  togglePrinterOnline: (printerId) => set((state) => {
-    const printers = state.printers.map(p => 
-      p.id === printerId 
-        ? { ...p, status: p.status === 'offline' ? 'idle' as const : 'offline' as const, progress: undefined, activeJobId: undefined } 
-        : p
-    );
-    const target = printers.find(p => p.id === printerId);
-    const log = `Printer ${target?.name} is now ${target?.status}.`;
-    return { printers, adminLogs: [log, ...state.adminLogs] };
-  }),
+      // Also trigger a real-time notification
+      const targetOrder = state.orders.find(o => o.id === orderId || o.orderCode === orderId);
+      const code = targetOrder ? targetOrder.orderCode : orderId;
 
-  // Chat
-  sendChatMessage: (text) => set((state) => {
-    const userMsg: ChatMessage = {
-      id: `msg_${Math.random().toString(36).substr(2, 9)}`,
-      sender: 'user',
-      text,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Simple automated assistant responder
-    let botReply = "I'm processing that question. Can you specify if you need details on single/double-sided sizing, document binding options (spiral vs. hard-bind), or help configuring a print job?";
-    const cleanText = text.toLowerCase();
-    
-    if (cleanText.includes('price') || cleanText.includes('cost') || cleanText.includes('rate')) {
-      botReply = "Our pricing is transparent: Black & White prints are Rs. 2/page. Color prints are Rs. 8/page. Spiral binding is Rs. 40, soft binding is Rs. 90, and hard binding is Rs. 150. Lamination is Rs. 20 per doc. We calculate pricing in real time during upload configuration!";
-    } else if (cleanText.includes('paper') || cleanText.includes('gsm') || cleanText.includes('size')) {
-      botReply = "We support A4, A3, A5, and Letter paper sizes. For page weight, we offer standard 75 GSM (best for text documents), 85 GSM, 100 GSM (great for proposals), and premium 120 GSM (best for brochures, photos, and presentations).";
-    } else if (cleanText.includes('binding') || cleanText.includes('spiral')) {
-      botReply = "We offer Spiral Binding (comb layout), Soft Binding (perfect book bound), and Hard Binding (heavy premium leatherette cover, popular for college theses and final reports). You can select binding in the order configurator.";
-    } else if (cleanText.includes('resume') || cleanText.includes('cv')) {
-      botReply = "I see you are interested in resumes! We have a built-in AI Resume Builder tool in the menu sidebar. Fill in your work experience and download a print-ready PDF instantly!";
-    } else if (cleanText.includes('wallet') || cleanText.includes('pay') || cleanText.includes('razorpay')) {
-      botReply = "You can add money to your wallet via our simulation of Razorpay, which supports mock cards and UPI. Ordering via wallet grants you 10% cash-back rewards points!";
-    } else if (cleanText.includes('hello') || cleanText.includes('hi')) {
-      botReply = "Hello! I am your Printing SaaS AI concierge. How can I help you print or manage files today?";
-    } else if (cleanText.includes('admin')) {
-      botReply = "To test admin controls, simply switch the role dropdown in the header to 'Admin'. You can monitor printers, adjust pricing rates, and track orders in real time!";
-    }
-    
-    const botMsg: ChatMessage = {
-      id: `msg_${Math.random().toString(36).substr(2, 9)}`,
-      sender: 'bot',
-      text: botReply,
-      timestamp: new Date(Date.now() + 500).toISOString()
-    };
-    
-    return {
-      chatMessages: [...state.chatMessages, userMsg, botMsg]
-    };
-  }),
+      const newNotif: AppNotification = {
+        id: `notif-${Date.now()}`,
+        title: `⚙️ Status Update: Order #${code}`,
+        message: `Your order status has been updated to "${newStatus}" by PrintNest Studio.`,
+        time: 'Just now',
+        type: 'order',
+        isRead: false
+      };
 
-  addAdminLog: (log) => set((state) => ({ adminLogs: [log, ...state.adminLogs] })),
-
-  // Printer Queue Simulation Tick
-  tickPrinters: () => set((state) => {
-    // 1. Find orders that are "Received" or "Printing"
-    // 2. Allocate printer if order is "Received" and printer is "idle"
-    let updatedOrders = [...state.orders];
-    let updatedPrinters = [...state.printers];
-    let updatedLogs = [...state.adminLogs];
-
-    // Allocate idle printers to "Received" orders
-    const receivedOrders = updatedOrders.filter(o => o.status === 'Received');
-    const idlePrinters = updatedPrinters.filter(p => p.status === 'idle');
-
-    for (let i = 0; i < Math.min(receivedOrders.length, idlePrinters.length); i++) {
-      const order = receivedOrders[i];
-      const printer = idlePrinters[i];
-
-      order.status = 'Printing';
-      order.currentPrinterId = printer.id;
-      order.printProgress = 0;
-
-      printer.status = 'printing';
-      printer.activeJobId = order.id;
-      printer.progress = 0;
-      
-      updatedLogs = [`Printer ${printer.name} started printing Order #${order.id}.`, ...updatedLogs];
-    }
-
-    // Tick active printing progress
-    updatedPrinters = updatedPrinters.map(p => {
-      if (p.status === 'printing' && p.activeJobId) {
-        const orderIndex = updatedOrders.findIndex(o => o.id === p.activeJobId);
-        if (orderIndex !== -1) {
-          const order = updatedOrders[orderIndex];
-          const newProgress = (p.progress || 0) + Math.floor(Math.random() * 20) + 10; // increase progress by 10-30%
-          
-          if (newProgress >= 100) {
-            // Done printing!
-            order.printProgress = 100;
-            const requiresBinding = order.items.some(item => item.config.binding !== 'none');
-            order.status = requiresBinding ? 'Binding' : 'Packaging';
-            order.currentPrinterId = undefined;
-
-            p.status = 'idle';
-            p.activeJobId = undefined;
-            p.progress = undefined;
-
-            updatedLogs = [`Printer ${p.name} completed printing Order #${order.id}.`, ...updatedLogs];
-          } else {
-            p.progress = newProgress;
-            order.printProgress = newProgress;
-            updatedOrders[orderIndex] = { ...order, printProgress: newProgress };
-          }
-        }
-      }
-      return p;
+      return {
+        orders: updatedOrders,
+        notifications: [newNotif, ...state.notifications]
+      };
     });
+  },
 
-    // Advance orders in "Binding" and "Packaging" to "Out for Delivery" and "Delivered"
-    updatedOrders = updatedOrders.map(order => {
-      if (order.status === 'Binding') {
-        // 10% chance to finish binding and move to packaging
-        if (Math.random() < 0.3) {
-          order.status = 'Packaging';
-          updatedLogs = [`Order #${order.id} binding completed. Packaging...`, ...updatedLogs];
-        }
-      } else if (order.status === 'Packaging') {
-        // Move to Out for Delivery
-        if (Math.random() < 0.2) {
-          order.status = 'Out for Delivery';
-          updatedLogs = [`Order #${order.id} packaged and handed to delivery partner.`, ...updatedLogs];
-        }
-      } else if (order.status === 'Out for Delivery') {
-        // Move to Delivered
-        if (Math.random() < 0.15) {
-          order.status = 'Delivered';
-          updatedLogs = [`Order #${order.id} has been successfully delivered.`, ...updatedLogs];
-        }
-      }
-      return order;
-    });
+  // Admin Services List
+  services: [
+    { id: 'srv-1', title: 'Document Printing', category: 'Printing', pricePerPage: 2.00, colorPrice: 8.00, isEnabled: true, paperSizes: ['A4', 'A3', 'Legal'] },
+    { id: 'srv-2', title: 'Colour Printing', category: 'Printing', pricePerPage: 8.00, colorPrice: 8.00, isEnabled: true, paperSizes: ['A4', 'A3'] },
+    { id: 'srv-3', title: 'Spiral Binding', category: 'Binding', pricePerPage: 40.00, colorPrice: 40.00, isEnabled: true, paperSizes: ['A4'] },
+    { id: 'srv-4', title: 'Hard Thesis Binding', category: 'Binding', pricePerPage: 150.00, colorPrice: 150.00, isEnabled: true, paperSizes: ['A4'] },
+    { id: 'srv-5', title: 'ID Cards & Badges', category: 'Specialty', pricePerPage: 50.00, colorPrice: 50.00, isEnabled: true, paperSizes: ['Standard'] },
+    { id: 'srv-6', title: 'Visiting Cards', category: 'Specialty', pricePerPage: 120.00, colorPrice: 120.00, isEnabled: true, paperSizes: ['Standard'] }
+  ],
 
+  addService: (service) => set((state) => ({
+    services: [...state.services, { ...service, id: `srv-${Date.now()}` }]
+  })),
+
+  updateService: (id, updatedData) => set((state) => ({
+    services: state.services.map(s => s.id === id ? { ...s, ...updatedData } : s)
+  })),
+
+  deleteService: (id) => set((state) => ({
+    services: state.services.filter(s => s.id !== id)
+  })),
+
+  toggleServiceStatus: (id) => set((state) => ({
+    services: state.services.map(s => s.id === id ? { ...s, isEnabled: !s.isEnabled } : s)
+  })),
+
+  // Admin Customer Directory
+  customersList: [
+    { id: 'c-1', name: 'Kaushav Sharma', email: 'kaushav@example.com', phone: '+91 98765 43210', totalOrders: 24, spentRevenue: 4850, isBlocked: false, joinDate: 'Jan 2024' },
+    { id: 'c-2', name: 'Aarav Mehta', email: 'aarav@example.com', phone: '+91 98123 45678', totalOrders: 12, spentRevenue: 2400, isBlocked: false, joinDate: 'Feb 2024' },
+    { id: 'c-3', name: 'Riya Verma', email: 'riya@example.com', phone: '+91 97654 32109', totalOrders: 5, spentRevenue: 890, isBlocked: false, joinDate: 'Mar 2024' }
+  ],
+
+  toggleBlockCustomer: (customerId) => set((state) => ({
+    customersList: state.customersList.map(c => c.id === customerId ? { ...c, isBlocked: !c.isBlocked } : c)
+  })),
+
+  // Admin Delivery Partners
+  deliveryPartners: [
+    { id: 'dp-1', name: 'Rahul Verma (Express Delivery)', phone: '+91 98989 12345', status: 'Online', assignedOrderCount: 3 },
+    { id: 'dp-2', name: 'Vikram Singh (Campus Dispatch)', phone: '+91 98787 54321', status: 'Online', assignedOrderCount: 1 },
+    { id: 'dp-3', name: 'Amit Kumar', phone: '+91 98111 22233', status: 'Offline', assignedOrderCount: 0 }
+  ],
+
+  updatePartnerStatus: (partnerId, status) => set((state) => ({
+    deliveryPartners: state.deliveryPartners.map(dp => dp.id === partnerId ? { ...dp, status } : dp)
+  })),
+
+  assignOrderToPartner: (orderId, partnerId) => set((state) => {
+    const partner = state.deliveryPartners.find(dp => dp.id === partnerId);
     return {
-      orders: updatedOrders,
-      printers: updatedPrinters,
-      adminLogs: updatedLogs
+      orders: state.orders.map(o => o.id === orderId || o.orderCode === orderId ? { ...o, assignedDeliveryPartner: partner?.name || partnerId, status: 'Out for Delivery' } : o)
     };
-  })
+  }),
+
+  // Admin Coupons
+  couponsList: [
+    { id: 'cp-1', code: 'PRINTFIRST', discountType: 'flat', discountValue: 10, minOrderValue: 30, usageCount: 142, isActive: true, expiryDate: '2026-12-31' },
+    { id: 'cp-2', code: 'PRINTNEST', discountType: 'percentage', discountValue: 15, minOrderValue: 100, usageCount: 88, isActive: true, expiryDate: '2026-12-31' }
+  ],
+
+  addCoupon: (coupon) => set((state) => ({
+    couponsList: [...state.couponsList, { ...coupon, id: `cp-${Date.now()}`, usageCount: 0 }]
+  })),
+
+  deleteCoupon: (code) => set((state) => ({
+    couponsList: state.couponsList.filter(c => c.code !== code)
+  })),
+
+  // Admin Inventory
+  inventoryItems: [
+    { id: 'inv-1', name: 'A4 75GSM Printing Paper', category: 'Paper', stockQuantity: 450, lowStockThreshold: 50, unit: 'reams' },
+    { id: 'inv-[#inv-2]', name: 'A3 100GSM Glossy Paper', category: 'Paper', stockQuantity: 80, lowStockThreshold: 20, unit: 'reams' },
+    { id: 'inv-3', name: 'HP LaserJet Cyan Ink Cartridge', category: 'Ink', stockQuantity: 12, lowStockThreshold: 5, unit: 'units' },
+    { id: 'inv-4', name: 'Spiral Comb Binding Coils (12mm)', category: 'Binding Materials', stockQuantity: 300, lowStockThreshold: 40, unit: 'coils' }
+  ],
+
+  updateInventoryStock: (itemId, newQuantity) => set((state) => ({
+    inventoryItems: state.inventoryItems.map(item => item.id === itemId ? { ...item, stockQuantity: newQuantity } : item)
+  })),
+
+  // App Notifications
+  notifications: [
+    { id: 'n-1', title: '🎉 Order Delivered!', message: 'Order #PRN-6582 has been delivered to 248, Rajpur Road.', time: '10 mins ago', type: 'order', isRead: true },
+    { id: 'n-2', title: '⚙️ Printing Started', message: 'Order #PRT00054 is currently printing at InkJet Pro Studio line #3.', time: '1 hour ago', type: 'order', isRead: false },
+    { id: 'n-3', title: '🏷️ ₹10 Cashback Coupon Added!', message: 'Use promo code PRINTFIRST on your next print order.', time: '3 hours ago', type: 'promo', isRead: false }
+  ],
+
+  addNotification: (notification) => set((state) => ({
+    notifications: [{ ...notification, id: `n-${Date.now()}`, isRead: false }, ...state.notifications]
+  })),
+
+  markNotificationsRead: () => set((state) => ({
+    notifications: state.notifications.map(n => ({ ...n, isRead: true }))
+  }))
 }));

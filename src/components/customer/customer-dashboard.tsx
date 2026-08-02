@@ -375,6 +375,31 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               />
             </div>
 
+            {/* 12 Popular Service Categories Bar */}
+            <div className="space-y-2 text-left">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">Popular Categories</span>
+                <span className="text-[10px] text-[#16A34A] font-bold">12 Services Available</span>
+              </div>
+              
+              <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+                {[
+                  'Document Printing', 'Colour Printing', 'Black & White', 'Photo Printing', 
+                  'Lamination', 'Spiral Binding', 'Hard Binding', 'ID Cards', 
+                  'Visiting Cards', 'Posters', 'Banners', 'Thesis Printing'
+                ].map((cat, i) => (
+                  <button
+                    key={i}
+                    onClick={() => triggerFileInput('all', '*/*')}
+                    className="px-3.5 py-2 rounded-xl border border-slate-100 bg-white hover:border-[#16A34A] hover:bg-emerald-50/50 text-slate-800 text-xs font-bold shrink-0 transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>
+                    <span>{cat}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Promotional Banner Card */}
             <div className="p-5 sm:p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[150px]">
               <div className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none overflow-hidden z-0 opacity-15">

@@ -401,11 +401,14 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </button>
               </div>
 
-              {/* Vector Printer Illustration (100% Visible on Mobile & Desktop) */}
-              <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 relative shrink-0 z-10 flex items-center justify-center">
-                <div className="w-full h-full rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center p-3 border border-white/20 shadow-md">
-                  <Printer className="w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 text-white stroke-[1.8] drop-shadow-md" />
-                </div>
+              {/* Printer Graphic Illustration (100% Visible on Mobile & Desktop) */}
+              <div className="w-28 sm:w-44 md:w-72 h-24 sm:h-36 md:h-44 relative shrink-0 z-10 flex items-center justify-center">
+                <img 
+                  src="/printer_illustration.jpg" 
+                  alt="PrintNest Studio printer"
+                  className="w-full h-full object-contain brightness-105"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
               </div>
             </div>
 

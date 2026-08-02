@@ -404,7 +404,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </button>
               </div>
 
-              <div className="hidden md:block w-72 h-44 relative shrink-0 z-10">
+              <div className="w-32 sm:w-44 md:w-72 h-28 sm:h-36 md:h-44 relative shrink-0 z-10 flex items-center justify-center">
                 <img 
                   src="/printer_illustration.jpg" 
                   alt="PrintNest Studio printer"

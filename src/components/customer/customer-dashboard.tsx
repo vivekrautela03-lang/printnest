@@ -375,17 +375,13 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               />
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[180px]">
+            <div className="p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[140px]">
               <div className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none overflow-hidden z-0 opacity-15">
                 <svg viewBox="0 0 200 200" className="w-full h-full object-cover">
                   <circle cx="150" cy="100" r="80" fill="none" stroke="white" strokeWidth="6" />
                   <circle cx="150" cy="100" r="50" fill="none" stroke="white" strokeWidth="8" />
                 </svg>
               </div>
-
-              <svg viewBox="0 0 24 24" className="w-4 h-4 text-white fill-white absolute left-[51%] top-[38%] opacity-90 animate-pulse pointer-events-none z-10">
-                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-              </svg>
 
               <div className="space-y-4 max-w-sm relative z-10 text-left">
                 <div className="space-y-1">
@@ -402,15 +398,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 >
                   Order Now
                 </button>
-              </div>
-
-              <div className="w-32 sm:w-44 md:w-72 h-28 sm:h-36 md:h-44 relative shrink-0 z-10 flex items-center justify-center">
-                <img 
-                  src="/printer_illustration.jpg" 
-                  alt="PrintNest Studio printer"
-                  className="w-full h-full object-contain brightness-105"
-                  style={{ mixBlendMode: 'multiply' }}
-                />
               </div>
             </div>
 

@@ -375,7 +375,8 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               />
             </div>
 
-            <div className="p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[140px]">
+            {/* Promotional Banner Card */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[150px]">
               <div className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none overflow-hidden z-0 opacity-15">
                 <svg viewBox="0 0 200 200" className="w-full h-full object-cover">
                   <circle cx="150" cy="100" r="80" fill="none" stroke="white" strokeWidth="6" />
@@ -383,21 +384,28 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </svg>
               </div>
 
-              <div className="space-y-4 max-w-sm relative z-10 text-left">
+              <div className="space-y-3.5 max-w-[60%] sm:max-w-sm relative z-10 text-left">
                 <div className="space-y-1">
-                  <h3 className="text-xl md:text-2xl font-extrabold leading-tight">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-extrabold leading-tight">
                     Print Today,<br />Pickup Tomorrow!
                   </h3>
-                  <p className="text-[11px] text-emerald-100 font-medium tracking-wide">
+                  <p className="text-[10px] sm:text-[11px] text-emerald-100 font-medium tracking-wide">
                     Fast. Reliable. Student Friendly.
                   </p>
                 </div>
                 <button
                   onClick={() => triggerFileInput('all', '*/*')}
-                  className="bg-white hover:bg-slate-50 text-[#0f7a26] text-[11px] font-extrabold py-2 px-5 rounded-full transition-transform hover:scale-[1.03] shadow-md cursor-pointer active:scale-95"
+                  className="bg-white hover:bg-slate-50 text-[#0f7a26] text-[10px] sm:text-[11px] font-extrabold py-2 px-4 sm:px-5 rounded-full transition-transform hover:scale-[1.03] shadow-md cursor-pointer active:scale-95"
                 >
                   Order Now
                 </button>
+              </div>
+
+              {/* Vector Printer Illustration (100% Visible on Mobile & Desktop) */}
+              <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 relative shrink-0 z-10 flex items-center justify-center">
+                <div className="w-full h-full rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center p-3 border border-white/20 shadow-md">
+                  <Printer className="w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 text-white stroke-[1.8] drop-shadow-md" />
+                </div>
               </div>
             </div>
 

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Bell, Search, Plus, Home as HomeIcon, History, User, FileText, 
   CheckCircle2, X, UploadCloud, Sparkles, ArrowRight, ArrowLeft, Image as ImageIcon,
   Printer, BookOpen, Layers, RefreshCw, Scissors, Maximize, Wand2, 
   Check, Trash2, Phone, MessageSquare, Download, CreditCard, Wallet, MapPin, Calendar, Clock, ShieldCheck,
-  ChevronDown, ChevronRight, Camera, Mail, Heart, Award, Ticket
+  ChevronDown, ChevronRight, Camera as CameraIcon, Mail, Heart, Award, Ticket
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -16,6 +16,10 @@ interface CustomerDashboardProps {
 
 export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps) {
   const { user, orders, placeOrder, topUpWallet } = useAppStore();
+
+  // Native File Input Ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentUploadType, setCurrentUploadType] = useState<string>('all');
 
   // Master Screen Navigation Flow:
   // 'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen'
@@ -72,6 +76,171 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
   const totalAmountBeforeDiscount = orderSubtotal + deliveryCharge;
   const finalTotalAmount = Math.max(0, totalAmountBeforeDiscount - discountAmount);
 
+  // File Upload Helper to trigger browser input/camera
+  const triggerFileInput = (type: string, accept: string, capture?: string) => {
+    setCurrentUploadType(type);
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      if (capture) {
+        fileInputRef.current.setAttribute('capture', capture);
+      } else {
+        fileInputRef.current.removeAttribute('capture');
+      }
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle File Selected Event
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const isPdf = file.name.toLowerCase().endsWith('.pdf');
+      setUploadedFile({
+        name: file.name,
+        pages: isPdf ? Math.max(1, Math.floor(file.size / 40000)) : 1,
+        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        type: isPdf ? 'pdf' : 'image'
+      });
+      setCurrentScreen('print_options');
+    } else {
+      handleFallbackUpload(currentUploadType);
+    }
+  };
+
+  // Fallback Upload Handler (Simulates realistic file selection if native picker is cancelled)
+  const handleFallbackUpload = (type: string) => {
+    const fallbacks: Record<string, { name: string; pages: number; size: string; type: 'pdf' | 'image' }> = {
+      all: { name: 'My_Document.pdf', pages: 8, size: '1.8 MB', type: 'pdf' },
+      camera: { name: 'Camera_Photo_Scan.jpg', pages: 1, size: '3.2 MB', type: 'image' },
+      pdf: { name: 'Notes_Document.pdf', pages: 12, size: '2.4 MB', type: 'pdf' },
+      scanner: { name: 'Scanned_Doc_HD.pdf', pages: 4, size: '1.5 MB', type: 'pdf' },
+      gallery: { name: 'Photo_Gallery_HQ.jpg', pages: 1, size: '2.9 MB', type: 'image' },
+      doc: { name: 'Report_Assignment.docx', pages: 6, size: '1.1 MB', type: 'pdf' },
+      xls: { name: 'Financial_Spreadsheet.xlsx', pages: 3, size: '0.8 MB', type: 'pdf' },
+      ppt: { name: 'Project_Presentation.pptx', pages: 15, size: '4.5 MB', type: 'pdf' },
+    };
+    const selected = fallbacks[type] || fallbacks['all'];
+    setUploadedFile(selected);
+    setCurrentScreen('print_options');
+  };
+
+  // 8 Exact Upload Services Matching Image 2
+  const uploadServicesGrid = [
+    {
+      id: 'all_files',
+      label: 'All Files',
+      circleBg: 'bg-[#fffbeb] border border-amber-100',
+      action: () => triggerFileInput('all', '*/*'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <path d="M3 7A2 2 0 0 1 5 5H9L11 7H19A2 2 0 0 1 21 9V17A2 2 0 0 1 19 19H5A2 2 0 0 1 3 17V7Z" fill="#f59e0b" fillOpacity="0.25" stroke="#d97706" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M3 9H21" stroke="#d97706" strokeWidth="1.8" />
+        </svg>
+      )
+    },
+    {
+      id: 'camera',
+      label: 'Camera',
+      circleBg: 'bg-[#e0f2fe] border border-sky-100',
+      action: () => triggerFileInput('camera', 'image/*', 'environment'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <rect x="3" y="6" width="18" height="14" rx="3" fill="#0284c7" />
+          <path d="M9 6L10.5 4H13.5L15 6" fill="#0284c7" />
+          <circle cx="12" cy="13" r="4" fill="white" />
+          <circle cx="12" cy="13" r="2.2" fill="#0284c7" />
+        </svg>
+      )
+    },
+    {
+      id: 'pdf',
+      label: 'PDF',
+      circleBg: 'bg-[#fef2f2] border border-rose-100',
+      action: () => triggerFileInput('pdf', '.pdf,application/pdf'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <path d="M4 4C4 2.89543 4.89543 2 6 2H14L20 8V20C20 21.1046 19.1046 22 18 22H6C4.89543 22 4 21.1046 4 20V4Z" fill="#dc2626" />
+          <path d="M14 2V8H20" fill="#b91c1c" />
+          <rect x="6" y="11" width="12" height="7" rx="1.5" fill="white" />
+          <text x="7.2" y="16.2" fill="#dc2626" fontSize="5.5" fontWeight="900" fontFamily="sans-serif">PDF</text>
+        </svg>
+      )
+    },
+    {
+      id: 'scanner',
+      label: 'Scanner',
+      circleBg: 'bg-[#f0fdf4] border border-emerald-100',
+      action: () => triggerFileInput('scanner', 'image/*', 'environment'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+          <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+          <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+          <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+          <rect x="7" y="7" width="10" height="10" rx="1.5" fill="#16a34a" fillOpacity="0.25" />
+          <line x1="9" y1="10" x2="15" y2="10" stroke="#16a34a" strokeWidth="1.8" />
+          <line x1="9" y1="12" x2="15" y2="12" stroke="#16a34a" strokeWidth="1.8" />
+          <line x1="9" y1="14" x2="13" y2="14" stroke="#16a34a" strokeWidth="1.8" />
+        </svg>
+      )
+    },
+    {
+      id: 'gallery',
+      label: 'Gallery',
+      circleBg: 'bg-[#f3e8ff] border border-purple-100',
+      action: () => triggerFileInput('gallery', 'image/*'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="4" fill="#7e22ce" />
+          <path d="M21 15L16 10L5 21" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="8.5" cy="8.5" r="2" fill="white" />
+        </svg>
+      )
+    },
+    {
+      id: 'doc',
+      label: 'DOC',
+      circleBg: 'bg-[#e0f2fe] border border-sky-100',
+      action: () => triggerFileInput('doc', '.doc,.docx,.txt'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <path d="M5 3C5 1.89543 5.89543 1 7 1H15L20 6V21C20 22.1046 19.1046 23 18 23H7C5.89543 23 5 22.1046 5 21V3Z" fill="#0284c7" />
+          <path d="M15 1V6H20" fill="#0369a1" />
+          <line x1="9" y1="11" x2="16" y2="11" stroke="white" strokeWidth="2" strokeLinecap="round" />
+          <line x1="9" y1="15" x2="16" y2="15" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )
+    },
+    {
+      id: 'xls',
+      label: 'XLS',
+      circleBg: 'bg-[#f0fdf4] border border-emerald-100',
+      action: () => triggerFileInput('xls', '.xls,.xlsx,.csv'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="3" fill="#15803d" />
+          <rect x="6" y="6" width="12" height="3" rx="0.5" fill="white" />
+          <rect x="6" y="10.5" width="5.5" height="3" rx="0.5" fill="white" fillOpacity="0.85" />
+          <rect x="12.5" y="10.5" width="5.5" height="3" rx="0.5" fill="white" fillOpacity="0.85" />
+          <rect x="6" y="15" width="5.5" height="3" rx="0.5" fill="white" fillOpacity="0.85" />
+          <rect x="12.5" y="15" width="5.5" height="3" rx="0.5" fill="white" fillOpacity="0.85" />
+        </svg>
+      )
+    },
+    {
+      id: 'ppt',
+      label: 'PPT',
+      circleBg: 'bg-[#fff7ed] border border-orange-100',
+      action: () => triggerFileInput('ppt', '.ppt,.pptx'),
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="3" fill="#ea580c" />
+          <path d="M10 8L16 12L10 16V8Z" fill="white" />
+        </svg>
+      )
+    }
+  ];
+
   // Apply Coupon
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,28 +258,17 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
     setCurrentScreen('payment_success');
   };
 
-  // Simulated File Upload Action
-  const handleSimulateFileUpload = (type: 'pdf' | 'image') => {
-    if (type === 'pdf') {
-      setUploadedFile({
-        name: 'Notes.pdf',
-        pages: 12,
-        size: '2.4 MB',
-        type: 'pdf'
-      });
-    } else {
-      setUploadedFile({
-        name: 'Photo_Scan_HD.jpg',
-        pages: 1,
-        size: '3.1 MB',
-        type: 'image'
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#fafbfa] text-slate-800 flex flex-col font-sans select-none relative pb-24">
       
+      {/* Hidden Native File Selector */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        onChange={handleFileSelected} 
+      />
+
       {/* Container Wrapper */}
       <div className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-6 space-y-6 text-left">
         
@@ -177,7 +335,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                   </p>
                 </div>
                 <button
-                  onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }}
+                  onClick={() => triggerFileInput('all', '*/*')}
                   className="bg-white hover:bg-slate-50 text-[#0f7a26] text-[11px] font-extrabold py-2 px-5 rounded-full transition-transform hover:scale-[1.03] shadow-md cursor-pointer active:scale-95"
                 >
                   Order Now
@@ -194,142 +352,28 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
-            {/* All Services Grid */}
-            <div className="space-y-3.5">
+            {/* Upload Files To Order Printouts (MATCHING IMAGE 2 EXACTLY) */}
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-slate-800 font-sans">All Services</h4>
-                <button 
-                  onClick={() => setCurrentScreen('all_tools')}
-                  className="text-xs font-bold text-[#16A34A] hover:underline cursor-pointer"
-                >
-                  View All
-                </button>
+                <h3 className="text-base md:text-lg font-extrabold text-slate-900 font-sans tracking-tight">
+                  Upload Files To Order <span className="text-[#16A34A]">Printouts</span>
+                </h3>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                {[
-                  { 
-                    id: 'print', 
-                    label: 'Print', 
-                    bg: 'bg-gradient-to-br from-emerald-500/10 via-emerald-500/15 to-teal-500/20 border-emerald-500/20 text-[#15803d]',
-                    action: () => { setAllowedFileType('all'); setCurrentScreen('upload'); },
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#15803d]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                        <path d="M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5" />
-                        <rect x="6" y="14" width="12" height="8" rx="1" fill="#15803d" fillOpacity="0.25" />
-                        <circle cx="18" cy="12" r="1" fill="#22c55e" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'binding', 
-                    label: 'Binding', 
-                    bg: 'bg-gradient-to-br from-teal-500/10 via-teal-500/15 to-cyan-500/20 border-teal-500/20 text-[#008080]',
-                    action: () => { setBinding('spiral'); setCurrentScreen('print_options'); },
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#008080]" fill="none">
-                        <rect x="7" y="3" width="13" height="18" rx="2" fill="#008080" fillOpacity="0.18" stroke="#008080" strokeWidth="1.8" />
-                        <rect x="9" y="3" width="11" height="18" rx="1" fill="#008080" />
-                        <rect x="4" y="5" width="4" height="2.2" rx="1" fill="#004d4d" />
-                        <rect x="4" y="9.5" width="4" height="2.2" rx="1" fill="#004d4d" />
-                        <rect x="4" y="14" width="4" height="2.2" rx="1" fill="#004d4d" />
-                        <rect x="4" y="18.5" width="4" height="2.2" rx="1" fill="#004d4d" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'documents', 
-                    label: 'Documents', 
-                    bg: 'bg-gradient-to-br from-blue-500/10 via-blue-500/15 to-sky-500/20 border-blue-500/20 text-[#2563eb]',
-                    action: () => setCurrentScreen('all_tools'),
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#2563eb]" fill="none">
-                        <path d="M3 7A2 2 0 0 1 5 5H9L11 7H19A2 2 0 0 1 21 9V17A2 2 0 0 1 19 19H5A2 2 0 0 1 3 17V7Z" fill="#2563eb" />
-                        <path d="M7 11H17M7 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'photo', 
-                    label: 'Photo Print', 
-                    bg: 'bg-gradient-to-br from-purple-500/10 via-purple-500/15 to-fuchsia-500/20 border-purple-500/20 text-[#7c3aed]',
-                    action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); },
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#7c3aed]" fill="none">
-                        <rect x="3" y="3" width="18" height="18" rx="4" fill="#7c3aed" fillOpacity="0.18" stroke="#7c3aed" strokeWidth="1.5" />
-                        <circle cx="8.5" cy="8.5" r="1.8" fill="#7c3aed" />
-                        <path d="M21 15L16 10L5 21" stroke="#7c3aed" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'scan', 
-                    label: 'Scan', 
-                    bg: 'bg-gradient-to-br from-sky-500/10 via-sky-500/15 to-blue-500/20 border-sky-500/20 text-[#0284c7]',
-                    action: () => setCurrentScreen('all_tools'),
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#0284c7]" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M4 7C4 5.89543 4.89543 5 6 5H18C19.1046 5 20 5.89543 20 7V13C20 14.1046 19.1046 15 18 15H6C4.89543 15 4 14.1046 4 13V7Z" fill="#0284c7" fillOpacity="0.2" />
-                        <path d="M2 17H22V19C22 20.1046 21.1046 21 20 21H4C2.89543 21 2 20.1046 2 19V17Z" fill="#0284c7" />
-                        <circle cx="18" cy="19" r="1" fill="white" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'editor', 
-                    label: 'Editor', 
-                    bg: 'bg-gradient-to-br from-indigo-500/10 via-indigo-500/15 to-purple-500/20 border-indigo-500/20 text-[#4f46e5]',
-                    action: () => setCurrentScreen('all_tools'),
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#4f46e5]" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#4f46e5" fillOpacity="0.18" />
-                        <path d="M12 11L16 7L18 9L14 13L11 14L12 11Z" fill="#4f46e5" stroke="#4f46e5" strokeWidth="1" />
-                        <line x1="8" y1="17" x2="16" y2="17" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'resume', 
-                    label: 'Resume Builder', 
-                    bg: 'bg-gradient-to-br from-blue-500/10 via-blue-500/15 to-indigo-500/20 border-blue-500/20 text-[#2563eb]',
-                    action: () => setCurrentScreen('all_tools'),
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#2563eb]" fill="none">
-                        <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="#2563eb" />
-                        <path d="M14 2V8H20" fill="#1d4ed8" />
-                        <circle cx="12" cy="11" r="2" fill="white" />
-                        <path d="M9 16C9 14.8954 10.3431 14 12 14C13.6569 14 15 14.8954 15 16" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
-                    )
-                  },
-                  { 
-                    id: 'more', 
-                    label: 'More', 
-                    bg: 'bg-gradient-to-br from-slate-100 via-slate-150 to-slate-200/70 border-slate-200 text-slate-600',
-                    action: () => setCurrentScreen('all_tools'),
-                    icon: (
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-slate-600" fill="currentColor">
-                        <circle cx="5" cy="12" r="2" />
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="19" cy="12" r="2" />
-                      </svg>
-                    )
-                  },
-                ].map((srv) => (
+              {/* 8 Cards Grid Matching Image 2 */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {uploadServicesGrid.map((opt) => (
                   <div 
-                    key={srv.id}
-                    onClick={srv.action}
-                    className="p-4 border border-slate-100/90 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-[#16A34A]/40 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-95 group relative overflow-hidden"
+                    key={opt.id}
+                    onClick={opt.action}
+                    className="p-5 md:p-6 border border-slate-100/90 rounded-[22px] bg-white flex flex-col items-center justify-center text-center gap-3.5 cursor-pointer hover:shadow-lg hover:border-[#16A34A]/40 transition-all duration-200 active:scale-95 shadow-xs group"
                   >
-                    <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-[#16A34A] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    
-                    <div className={`w-12 h-12 rounded-2xl ${srv.bg} border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 shadow-xs`}>
-                      {srv.icon}
+                    <div className={`w-16 h-16 rounded-full ${opt.circleBg} flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 shadow-2xs`}>
+                      {opt.icon}
                     </div>
 
-                    <span className="text-[11.5px] font-extrabold text-slate-800 tracking-tight leading-none group-hover:text-[#16A34A] transition-colors">
-                      {srv.label}
+                    <span className="text-xs md:text-sm font-extrabold text-slate-900 tracking-tight leading-none group-hover:text-[#16A34A] transition-colors">
+                      {opt.label}
                     </span>
                   </div>
                 ))}
@@ -380,7 +424,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </div>
 
                 <div 
-                  onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }}
+                  onClick={() => triggerFileInput('all', '*/*')}
                   className="w-full sm:w-28 min-h-[64px] border-2 border-dashed border-slate-200 hover:border-[#16A34A] rounded-2xl flex items-center justify-center text-slate-400 hover:text-[#16A34A] transition-colors cursor-pointer shrink-0 active:scale-95 bg-white"
                 >
                   <Plus className="w-6 h-6" />
@@ -391,11 +435,10 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         )}
 
         {/* ========================================================================================= */}
-        {/* SCREEN: MY PROFILE (MATCHING REFERENCE IMAGE EXACTLY) */}
+        {/* SCREEN: MY PROFILE */}
         {/* ========================================================================================= */}
         {currentScreen === 'profile_screen' && (
           <div className="space-y-6 animate-fade-in text-left">
-            {/* My Profile Header */}
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-xl font-extrabold text-slate-900 font-sans">My Profile</h2>
@@ -420,16 +463,14 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
-            {/* Top Profile Summary Banner Card */}
             <div className="p-6 border border-slate-100 rounded-3xl bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
-              {/* Left: Avatar + Details */}
               <div className="flex items-center gap-5">
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full border-4 border-slate-100 overflow-hidden shadow-xs">
                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" alt="Kaushav Sharma" className="w-full h-full object-cover" />
                   </div>
                   <button className="absolute bottom-0 right-0 w-7 h-7 bg-white text-[#16A34A] rounded-full border border-slate-200 flex items-center justify-center shadow-xs hover:bg-emerald-50 cursor-pointer">
-                    <Camera className="w-3.5 h-3.5" />
+                    <CameraIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -452,7 +493,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </div>
               </div>
 
-              {/* Right: 3 Metric Cards */}
               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
                 <div className="text-center space-y-1 px-3">
                   <div className="w-10 h-10 bg-emerald-50 text-[#16A34A] rounded-2xl flex items-center justify-center mx-auto">
@@ -484,10 +524,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
-            {/* Bottom 2 Column Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
-              {/* Account Settings List (Left Column) */}
               <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 shadow-sm">
                 <h4 className="text-sm font-extrabold text-slate-900">Account Settings</h4>
 
@@ -520,10 +557,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </div>
               </div>
 
-              {/* Wallet & Recent Orders (Right Column) */}
               <div className="space-y-6">
-                
-                {/* My Wallet Box */}
                 <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 text-left shadow-sm">
                   <h4 className="text-sm font-extrabold text-slate-900">My Wallet</h4>
 
@@ -560,7 +594,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                   </div>
                 </div>
 
-                {/* Recent Orders Box */}
                 <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 text-left shadow-sm">
                   <div className="flex justify-between items-center">
                     <h4 className="text-sm font-extrabold text-slate-900">Recent Orders</h4>
@@ -597,16 +630,14 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                     View All Orders →
                   </button>
                 </div>
-
               </div>
-
             </div>
           </div>
         )}
 
-        {/* Other screens (all_tools, upload, print_options, cart, payment, payment_success, track_order, order_details) */}
+        {/* SCREEN: ALL TOOLS (EXACT MATCH TO IMAGE 2) */}
         {currentScreen === 'all_tools' && (
-          <div className="space-y-7 animate-fade-in">
+          <div className="space-y-7 animate-fade-in text-left">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <button 
@@ -629,173 +660,39 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </button>
             </div>
 
-            {/* Document Tools */}
-            <div className="space-y-3.5 text-left">
-              <h3 className="text-sm font-extrabold text-slate-800">Document Tools</h3>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                {[
-                  { label: 'Print PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
-                  { label: 'Image to PDF', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Compress PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
-                  { label: 'Merge PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
-                  { label: 'Split PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
-                  { label: 'Crop PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
-                  { label: 'Rotate PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
-                  { label: 'More', action: () => { setAllowedFileType('all'); setCurrentScreen('upload'); } },
-                ].map((t, idx) => (
-                  <div key={idx} onClick={t.action} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-blue-400/40 hover:shadow-md transition-all active:scale-95">
-                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
+            {/* Upload Files To Order Printouts (MATCHING IMAGE 2 EXACTLY) */}
+            <div className="space-y-4">
+              <h3 className="text-base md:text-lg font-extrabold text-slate-900 font-sans tracking-tight">
+                Upload Files To Order <span className="text-[#16A34A]">Printouts</span>
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {uploadServicesGrid.map((opt) => (
+                  <div 
+                    key={opt.id}
+                    onClick={opt.action}
+                    className="p-5 md:p-6 border border-slate-100/90 rounded-[22px] bg-white flex flex-col items-center justify-center text-center gap-3.5 cursor-pointer hover:shadow-lg hover:border-[#16A34A]/40 transition-all duration-200 active:scale-95 shadow-xs group"
+                  >
+                    <div className={`w-16 h-16 rounded-full ${opt.circleBg} flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 shadow-2xs`}>
+                      {opt.icon}
                     </div>
-                    <span className="text-[11px] font-bold text-slate-700 leading-tight">{t.label}</span>
+
+                    <span className="text-xs md:text-sm font-extrabold text-slate-900 tracking-tight leading-none group-hover:text-[#16A34A] transition-colors">
+                      {opt.label}
+                    </span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Image Tools */}
-            <div className="space-y-3.5 text-left">
-              <h3 className="text-sm font-extrabold text-slate-800">Image Tools</h3>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                {[
-                  { label: 'Print Image', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Resize', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Rotate', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Filter', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Enhance', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Background', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'Scan', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                  { label: 'More', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
-                ].map((t, idx) => (
-                  <div key={idx} onClick={t.action} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-emerald-400/40 hover:shadow-md transition-all active:scale-95">
-                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
-                      <ImageIcon className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-700 leading-tight">{t.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Convert Tools */}
-            <div className="space-y-3.5 text-left">
-              <h3 className="text-sm font-extrabold text-slate-800">Convert Tools</h3>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-blue-400/40 hover:shadow-md transition-all active:scale-95">
-                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-extrabold text-sm font-sans shadow-sm">W</div>
-                  <span className="text-[11px] font-bold text-slate-700 leading-tight">Word to PDF</span>
-                </div>
-                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-orange-400/40 hover:shadow-md transition-all active:scale-95">
-                  <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white font-extrabold text-sm font-sans shadow-sm">P</div>
-                  <span className="text-[11px] font-bold text-slate-700 leading-tight">PDF to PPT</span>
-                </div>
-                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-emerald-400/40 hover:shadow-md transition-all active:scale-95">
-                  <div className="w-10 h-10 bg-emerald-700 rounded-xl flex items-center justify-center text-white font-extrabold text-sm font-sans shadow-sm">X</div>
-                  <span className="text-[11px] font-bold text-slate-700 leading-tight">Excel to PDF</span>
-                </div>
-                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-95">
-                  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 font-bold">...</div>
-                  <span className="text-[11px] font-bold text-slate-700 leading-tight">More</span>
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {currentScreen === 'upload' && (
-          <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <button 
-                onClick={() => setCurrentScreen('all_tools')}
-                className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 font-sans">
-                  Upload Document
-                </h2>
-                <p className="text-[11px] text-slate-400 font-medium">
-                  {allowedFileType === 'pdf' ? 'Supports PDF files only' : allowedFileType === 'image' ? 'Supports JPG, PNG, JPEG images' : 'Support PDF • JPG • PNG • JPEG • DOCX'}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-8 border-2 border-dashed border-slate-200 hover:border-[#16A34A] rounded-3xl bg-white text-center space-y-4 transition-all">
-              <div className="w-16 h-16 bg-emerald-50 text-[#16A34A] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
-                <UploadCloud className="w-8 h-8" />
-              </div>
-
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-slate-800">Drag & Drop Files Here</h4>
-                <p className="text-xs text-slate-400">or choose from your local device storage</p>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                <button 
-                  onClick={() => handleSimulateFileUpload('pdf')}
-                  className="bg-[#16A34A] hover:bg-emerald-700 text-white py-2.5 px-5 rounded-xl font-extrabold text-xs shadow-sm cursor-pointer transition-all active:scale-95"
-                >
-                  Choose File (PDF)
-                </button>
-                <button 
-                  onClick={() => handleSimulateFileUpload('image')}
-                  className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-xl font-extrabold text-xs cursor-pointer transition-all active:scale-95"
-                >
-                  Browse Image (JPG/PNG)
-                </button>
-                <button 
-                  onClick={() => handleSimulateFileUpload('image')}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-4 rounded-xl font-extrabold text-xs cursor-pointer"
-                >
-                  Use Camera
-                </button>
-              </div>
-            </div>
-
-            {uploadedFile && (
-              <div className="p-4 border border-slate-200 rounded-2xl bg-white flex items-center justify-between gap-4 shadow-sm animate-fade-in-up">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 bg-rose-50 text-rose-500 rounded-xl flex flex-col items-center justify-center shrink-0 border border-rose-100">
-                    {uploadedFile.type === 'pdf' ? (
-                      <FileText className="w-5 h-5 fill-current opacity-85" />
-                    ) : (
-                      <ImageIcon className="w-5 h-5 text-emerald-600" />
-                    )}
-                  </div>
-
-                  <div>
-                    <h5 className="text-xs font-extrabold text-slate-900">{uploadedFile.name}</h5>
-                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                      {uploadedFile.pages} Pages • {uploadedFile.size}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0">
-                  <Check className="w-4 h-4 stroke-[3]" />
-                </div>
-              </div>
-            )}
-
-            <button
-              disabled={!uploadedFile}
-              onClick={() => setCurrentScreen('print_options')}
-              className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md cursor-pointer disabled:opacity-50 transition-all active:scale-[0.99]"
-            >
-              Continue to Print Settings →
-            </button>
-          </div>
-        )}
-
+        {/* SCREEN: PRINT OPTIONS */}
         {currentScreen === 'print_options' && (
           <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
               <button 
-                onClick={() => setCurrentScreen('upload')}
+                onClick={() => setCurrentScreen('dashboard')}
                 className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -901,6 +798,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
           </div>
         )}
 
+        {/* SCREEN: CART */}
         {currentScreen === 'cart' && (
           <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -984,6 +882,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
           </div>
         )}
 
+        {/* SCREEN: PAYMENT */}
         {currentScreen === 'payment' && (
           <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
@@ -1057,6 +956,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
           </div>
         )}
 
+        {/* SCREEN: PAYMENT SUCCESS */}
         {currentScreen === 'payment_success' && (
           <div className="space-y-6 max-w-md mx-auto py-8 animate-fade-in text-center">
             <div className="relative w-20 h-20 bg-emerald-50 text-[#16A34A] rounded-full flex items-center justify-center mx-auto shadow-md">
@@ -1108,6 +1008,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
           </div>
         )}
 
+        {/* SCREEN: TRACK ORDER / ORDER DETAILS */}
         {(currentScreen === 'track_order' || currentScreen === 'order_details') && (
           <div className="space-y-6 max-w-md mx-auto animate-fade-in text-left">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -1234,7 +1135,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         </button>
 
         <button
-          onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }}
+          onClick={() => triggerFileInput('all', '*/*')}
           className="flex flex-col items-center justify-center w-11 h-11 rounded-full bg-[#16A34A] text-white -translate-y-3 shadow-lg active:scale-95 transition-all cursor-pointer"
           title="Configure Printing"
         >

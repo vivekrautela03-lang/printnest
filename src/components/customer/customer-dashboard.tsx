@@ -6,7 +6,7 @@ import {
   CheckCircle2, X, UploadCloud, Sparkles, ArrowRight, ArrowLeft, Image as ImageIcon,
   Printer, BookOpen, Layers, RefreshCw, Scissors, Maximize, Wand2, 
   Check, Trash2, Phone, MessageSquare, Download, CreditCard, Wallet, MapPin, Calendar, Clock, ShieldCheck,
-  ChevronDown, ChevronRight, Camera as CameraIcon, Mail, Heart, Award, Ticket
+  ChevronDown, ChevronRight, Camera as CameraIcon, Mail, Heart, Award, Ticket, Lock, Settings
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -22,7 +22,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
   const [currentUploadType, setCurrentUploadType] = useState<string>('all');
 
   // Master Screen Navigation Flow:
-  // 'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen'
   const [currentScreen, setCurrentScreen] = useState<
     'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen'
   >('dashboard');
@@ -61,8 +60,64 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
   const [discountAmount, setDiscountAmount] = useState(0);
 
   // Active Modals & Search
-  const [activeModal, setActiveModal] = useState<'none' | 'notifications' | 'profile' | 'admin'>('none');
+  const [activeModal, setActiveModal] = useState<
+    'none' | 'notifications' | 'profile' | 'admin' | 
+    'edit_personal_info' | 'edit_addresses' | 'edit_payment_methods' | 
+    'edit_print_preferences' | 'edit_notifications' | 'edit_security'
+  >('none');
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // =========================================================================================
+  // REAL-TIME USER ACCOUNT SETTINGS DATA STATES
+  // =========================================================================================
+  const [profileData, setProfileData] = useState({
+    name: user?.name || 'Kaushav Sharma',
+    email: user?.email || 'kaushav@example.com',
+    phone: '+91 98765 43210',
+    location: 'Dehradun, Uttarakhand, India'
+  });
+
+  const [addresses, setAddresses] = useState([
+    { id: 1, label: 'Home (Default)', text: 'Kaushav, 248, Rajpur Road, Dehradun, Uttarakhand - 248001', isDefault: true },
+    { id: 2, label: 'Hostel', text: 'Campus Hostel Block B, Room 304, UPES Dehradun - 248007', isDefault: false }
+  ]);
+  const [newAddressText, setNewAddressText] = useState('');
+  const [newAddressLabel, setNewAddressLabel] = useState('');
+
+  const [paymentMethodsList, setPaymentMethodsList] = useState([
+    { id: 1, type: 'UPI', detail: 'kaushav@okaxis', isDefault: true },
+    { id: 2, type: 'Card', detail: '•••• •••• •••• 4242 (HDFC Visa)', isDefault: false }
+  ]);
+  const [newUpiId, setNewUpiId] = useState('');
+
+  const [printPrefs, setPrintPrefs] = useState({
+    defaultColor: 'bw',
+    defaultSize: 'A4',
+    defaultBinding: 'spiral',
+    defaultSides: 'double'
+  });
+
+  const [notificationSettings, setNotificationSettings] = useState({
+    orderUpdates: true,
+    whatsappAlerts: true,
+    promoOffers: true,
+    creditAlerts: true
+  });
+
+  const [securityForm, setSecurityForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    twoFactor: true
+  });
+
+  // Show Toast Alert Helper
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Live Price Calculation Engine
   const baseRate = printType === 'color' ? 8 : 2;
@@ -107,7 +162,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
     }
   };
 
-  // Fallback Upload Handler (Simulates realistic file selection if native picker is cancelled)
+  // Fallback Upload Handler
   const handleFallbackUpload = (type: string) => {
     const fallbacks: Record<string, { name: string; pages: number; size: string; type: 'pdf' | 'image' }> = {
       all: { name: 'My_Document.pdf', pages: 8, size: '1.8 MB', type: 'pdf' },
@@ -269,19 +324,28 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
         onChange={handleFileSelected} 
       />
 
+      {/* Global Success Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 inset-x-0 z-50 flex justify-center pointer-events-none animate-fade-in-down">
+          <div className="bg-slate-900 text-white font-extrabold text-xs py-3 px-6 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-500/40">
+            <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* Container Wrapper */}
       <div className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-6 space-y-6 text-left">
         
         {/* ========================================================================================= */}
-        {/* SCREEN 0: DASHBOARD (HOME SCREEN) */}
+        {/* SCREEN 0: DASHBOARD */}
         {/* ========================================================================================= */}
         {currentScreen === 'dashboard' && (
           <div className="space-y-6 animate-fade-in">
-            {/* Personalized Header */}
             <div className="flex justify-between items-center">
               <div className="space-y-0.5">
                 <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5 font-sans">
-                  Hi, {user?.name || 'Kaushav'} <span className="inline-block animate-bounce origin-bottom-right">👋</span>
+                  Hi, {profileData.name.split(' ')[0]} <span className="inline-block animate-bounce origin-bottom-right">👋</span>
                 </h2>
                 <p className="text-[11px] text-slate-500 font-medium">
                   What would you like to do today?
@@ -300,7 +364,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
-            {/* Permanent Green Highlight Search Input */}
             <div className="relative w-full">
               <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
               <input 
@@ -312,7 +375,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               />
             </div>
 
-            {/* Promotional Banner Card */}
             <div className="p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[180px]">
               <div className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none overflow-hidden z-0 opacity-15">
                 <svg viewBox="0 0 200 200" className="w-full h-full object-cover">
@@ -352,7 +414,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
-            {/* Upload Files To Order Printouts (MATCHING IMAGE 2 EXACTLY) */}
+            {/* Upload Files Grid Matching Image 2 */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-base md:text-lg font-extrabold text-slate-900 font-sans tracking-tight">
@@ -360,7 +422,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
                 </h3>
               </div>
 
-              {/* 8 Cards Grid Matching Image 2 */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {uploadServicesGrid.map((opt) => (
                   <div 
@@ -467,28 +528,28 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               <div className="flex items-center gap-5">
                 <div className="relative">
                   <div className="w-24 h-24 rounded-full border-4 border-slate-100 overflow-hidden shadow-xs">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" alt="Kaushav Sharma" className="w-full h-full object-cover" />
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" alt={profileData.name} className="w-full h-full object-cover" />
                   </div>
-                  <button className="absolute bottom-0 right-0 w-7 h-7 bg-white text-[#16A34A] rounded-full border border-slate-200 flex items-center justify-center shadow-xs hover:bg-emerald-50 cursor-pointer">
+                  <button onClick={() => setActiveModal('edit_personal_info')} className="absolute bottom-0 right-0 w-7 h-7 bg-white text-[#16A34A] rounded-full border border-slate-200 flex items-center justify-center shadow-xs hover:bg-emerald-50 cursor-pointer">
                     <CameraIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 <div className="space-y-1 text-left">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-extrabold text-slate-900">Kaushav Sharma</h3>
+                    <h3 className="text-lg font-extrabold text-slate-900">{profileData.name}</h3>
                     <span className="text-[10px] font-bold text-[#16A34A] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
                       Verified ✓
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-slate-400" /> kaushav@example.com
+                    <Mail className="w-3.5 h-3.5 text-slate-400" /> {profileData.email}
                   </p>
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" /> +91 98765 43210
+                    <Phone className="w-3.5 h-3.5 text-slate-400" /> {profileData.phone}
                   </p>
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> Dehradun, Uttarakhand, India
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> {profileData.location}
                   </p>
                 </div>
               </div>
@@ -524,22 +585,23 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </div>
             </div>
 
+            {/* FULLY FUNCTIONAL ACCOUNT SETTINGS LIST */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 shadow-sm">
                 <h4 className="text-sm font-extrabold text-slate-900">Account Settings</h4>
 
                 <div className="space-y-1">
                   {[
-                    { title: 'Personal Information', desc: 'Update your name, email and phone number', icon: User },
-                    { title: 'Addresses', desc: 'Manage your delivery addresses', icon: MapPin },
-                    { title: 'Payment Methods', desc: 'Add or manage your payment methods', icon: CreditCard },
-                    { title: 'Print Preferences', desc: 'Set your default print settings', icon: Printer },
-                    { title: 'Notifications', desc: 'Manage your notification preferences', icon: Bell },
-                    { title: 'Security', desc: 'Change password and security settings', icon: ShieldCheck },
-                  ].map((item, i) => (
+                    { id: 'personal', title: 'Personal Information', desc: 'Update your name, email and phone number', icon: User, action: () => setActiveModal('edit_personal_info') },
+                    { id: 'addresses', title: 'Addresses', desc: 'Manage your delivery addresses', icon: MapPin, action: () => setActiveModal('edit_addresses') },
+                    { id: 'payment', title: 'Payment Methods', desc: 'Add or manage your payment methods', icon: CreditCard, action: () => setActiveModal('edit_payment_methods') },
+                    { id: 'preferences', title: 'Print Preferences', desc: 'Set your default print settings', icon: Printer, action: () => setActiveModal('edit_print_preferences') },
+                    { id: 'notifications', title: 'Notifications', desc: 'Manage your notification preferences', icon: Bell, action: () => setActiveModal('edit_notifications') },
+                    { id: 'security', title: 'Security', desc: 'Change password and security settings', icon: ShieldCheck, action: () => setActiveModal('edit_security') },
+                  ].map((item) => (
                     <div 
-                      key={i} 
-                      onClick={() => alert(`Opened ${item.title}`)}
+                      key={item.id} 
+                      onClick={item.action}
                       className="p-3 rounded-2xl hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors group"
                     >
                       <div className="flex items-center gap-3.5">
@@ -635,7 +697,7 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
           </div>
         )}
 
-        {/* SCREEN: ALL TOOLS (EXACT MATCH TO IMAGE 2) */}
+        {/* SCREEN: ALL TOOLS */}
         {currentScreen === 'all_tools' && (
           <div className="space-y-7 animate-fade-in text-left">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
@@ -660,7 +722,6 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
               </button>
             </div>
 
-            {/* Upload Files To Order Printouts (MATCHING IMAGE 2 EXACTLY) */}
             <div className="space-y-4">
               <h3 className="text-base md:text-lg font-extrabold text-slate-900 font-sans tracking-tight">
                 Upload Files To Order <span className="text-[#16A34A]">Printouts</span>
@@ -1102,8 +1163,8 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
 
                 <div className="p-4 border border-slate-100 rounded-2xl bg-white space-y-1.5">
                   <h4 className="text-[10px] uppercase font-bold text-slate-400">Delivery Address</h4>
-                  <p className="font-bold text-slate-800">Kaushav</p>
-                  <p className="text-slate-500">248, Rajpur Road, Dehradun, Uttarakhand - 248001</p>
+                  <p className="font-bold text-slate-800">{addresses.find(a => a.isDefault)?.label || 'Home'}</p>
+                  <p className="text-slate-500">{addresses.find(a => a.isDefault)?.text || '248, Rajpur Road, Dehradun, Uttarakhand - 248001'}</p>
                 </div>
 
                 <button onClick={() => setCurrentScreen('track_order')} className="w-full bg-[#16A34A] text-white py-3.5 rounded-2xl font-extrabold text-xs text-center">
@@ -1226,6 +1287,384 @@ export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps)
             <button onClick={() => alert('GST Invoice report compiled!')} className="w-full bg-[#16A34A] text-white py-3 rounded-xl font-extrabold text-xs shadow-md">
               Download GST Tax Invoices (CSV/PDF)
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* 1. PERSONAL INFORMATION MODAL */}
+      {/* ========================================================================================= */}
+      {activeModal === 'edit_personal_info' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-[#16A34A]" />
+              <h3 className="text-base font-extrabold text-slate-900">Edit Personal Information</h3>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setActiveModal('none');
+              showToast('Personal Information updated successfully!');
+            }} className="space-y-3.5 text-xs font-semibold">
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Full Name</label>
+                <input 
+                  type="text" 
+                  value={profileData.name} 
+                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Email Address</label>
+                <input 
+                  type="email" 
+                  value={profileData.email} 
+                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Phone Number</label>
+                <input 
+                  type="text" 
+                  value={profileData.phone} 
+                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Location / Address</label>
+                <input 
+                  type="text" 
+                  value={profileData.location} 
+                  onChange={(e) => setProfileData({ ...profileData, location: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <button type="submit" className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-95 cursor-pointer mt-2">
+                Save Personal Information
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* 2. ADDRESSES MODAL */}
+      {/* ========================================================================================= */}
+      {activeModal === 'edit_addresses' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-[#16A34A]" />
+              <h3 className="text-base font-extrabold text-slate-900">Manage Delivery Addresses</h3>
+            </div>
+
+            <div className="space-y-3 max-h-48 overflow-y-auto pr-1 text-xs">
+              {addresses.map((addr) => (
+                <div key={addr.id} className={`p-3.5 rounded-2xl border flex justify-between items-start ${addr.isDefault ? 'border-[#16A34A] bg-emerald-50/40' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className="space-y-1">
+                    <span className="font-extrabold text-slate-900 block">{addr.label}</span>
+                    <p className="text-[11px] text-slate-500">{addr.text}</p>
+                  </div>
+                  {!addr.isDefault && (
+                    <button 
+                      onClick={() => {
+                        setAddresses(addresses.map(a => ({ ...a, isDefault: a.id === addr.id })));
+                        showToast(`Default address set to ${addr.label}`);
+                      }}
+                      className="text-[10px] font-bold text-[#16A34A] hover:underline shrink-0"
+                    >
+                      Make Default
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (newAddressText) {
+                setAddresses([...addresses, { id: Date.now(), label: newAddressLabel || 'Other', text: newAddressText, isDefault: false }]);
+                setNewAddressText('');
+                setNewAddressLabel('');
+                showToast('New delivery address added!');
+              }
+            }} className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
+              <span className="font-extrabold text-slate-800 block text-[11px]">+ Add New Address</span>
+              <input 
+                type="text" 
+                placeholder="Label (e.g. Home, Office, Campus)" 
+                value={newAddressLabel} 
+                onChange={(e) => setNewAddressLabel(e.target.value)} 
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold focus:outline-none focus:border-[#16A34A]" 
+                required 
+              />
+              <textarea 
+                placeholder="Full Street Address, City, State, Pincode" 
+                value={newAddressText} 
+                onChange={(e) => setNewAddressText(e.target.value)} 
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold focus:outline-none focus:border-[#16A34A] h-16 resize-none" 
+                required 
+              />
+              <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl font-extrabold text-xs cursor-pointer">
+                Add Address
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* 3. PAYMENT METHODS MODAL */}
+      {/* ========================================================================================= */}
+      {activeModal === 'edit_payment_methods' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-[#16A34A]" />
+              <h3 className="text-base font-extrabold text-slate-900">Manage Payment Methods</h3>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              {paymentMethodsList.map((pm) => (
+                <div key={pm.id} className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 flex justify-between items-center">
+                  <div>
+                    <span className="font-extrabold text-slate-900 block">{pm.type}</span>
+                    <span className="text-[11px] font-mono text-slate-500">{pm.detail}</span>
+                  </div>
+                  {pm.isDefault && <span className="text-[10px] font-bold text-[#16A34A] bg-emerald-50 px-2 py-0.5 rounded-full">Primary</span>}
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (newUpiId) {
+                setPaymentMethodsList([...paymentMethodsList, { id: Date.now(), type: 'UPI', detail: newUpiId, isDefault: false }]);
+                setNewUpiId('');
+                showToast('New UPI ID added successfully!');
+              }
+            }} className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
+              <span className="font-extrabold text-slate-800 block text-[11px]">+ Add New UPI ID</span>
+              <input 
+                type="text" 
+                placeholder="Enter UPI ID (e.g. username@upi)" 
+                value={newUpiId} 
+                onChange={(e) => setNewUpiId(e.target.value)} 
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 font-bold focus:outline-none focus:border-[#16A34A]" 
+                required 
+              />
+              <button type="submit" className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-2.5 rounded-xl font-extrabold text-xs cursor-pointer">
+                Save UPI ID
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* 4. PRINT PREFERENCES MODAL */}
+      {/* ========================================================================================= */}
+      {activeModal === 'edit_print_preferences' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-[#16A34A]" />
+              <h3 className="text-base font-extrabold text-slate-900">Set Default Print Settings</h3>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setPrintType(printPrefs.defaultColor as any);
+              setPaperSize(printPrefs.defaultSize as any);
+              setBinding(printPrefs.defaultBinding as any);
+              setPrintSide(printPrefs.defaultSides === 'double' ? 'double' : 'single');
+              setActiveModal('none');
+              showToast('Default Print Preferences updated!');
+            }} className="space-y-3.5 text-xs font-semibold">
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Default Color Mode</label>
+                <select value={printPrefs.defaultColor} onChange={(e) => setPrintPrefs({ ...printPrefs, defaultColor: e.target.value })} className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none">
+                  <option value="bw">Black & White (Standard)</option>
+                  <option value="color">Colour</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Default Paper Size</label>
+                <select value={printPrefs.defaultSize} onChange={(e) => setPrintPrefs({ ...printPrefs, defaultSize: e.target.value })} className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none">
+                  <option value="A4">A4 (Standard)</option>
+                  <option value="A3">A3 (Poster Size)</option>
+                  <option value="Legal">Legal</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Default Binding</label>
+                <select value={printPrefs.defaultBinding} onChange={(e) => setPrintPrefs({ ...printPrefs, defaultBinding: e.target.value })} className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none">
+                  <option value="spiral">Spiral Comb</option>
+                  <option value="soft">Soft Binding</option>
+                  <option value="hard">Hard Thesis Binding</option>
+                  <option value="none">No Binding</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Default Print Sides</label>
+                <select value={printPrefs.defaultSides} onChange={(e) => setPrintPrefs({ ...printPrefs, defaultSides: e.target.value })} className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-bold focus:outline-none">
+                  <option value="double">Double Side (Eco-friendly)</option>
+                  <option value="single">Single Side</option>
+                </select>
+              </div>
+
+              <button type="submit" className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-md cursor-pointer">
+                Save Print Preferences
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* 5. NOTIFICATION PREFERENCES MODAL */}
+      {/* ========================================================================================= */}
+      {activeModal === 'edit_notifications' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-[#16A34A]" />
+              <h3 className="text-base font-extrabold text-slate-900">Notification Preferences</h3>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setActiveModal('none');
+              showToast('Notification Preferences saved!');
+            }} className="space-y-3 text-xs">
+              {[
+                { key: 'orderUpdates', title: 'Order Status Updates', desc: 'Real-time SMS & Email alerts when printing completes' },
+                { key: 'whatsappAlerts', title: 'WhatsApp Tracking Alerts', desc: 'Receive live WhatsApp dispatch updates' },
+                { key: 'promoOffers', title: 'Promotional Offers & Rewards', desc: 'Get notified about cashback discount coupons' },
+                { key: 'creditAlerts', title: 'Wallet Balance Notifications', desc: 'Alerts when PrintNest wallet balance is low' },
+              ].map((item) => (
+                <div key={item.key} className="p-3 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div>
+                    <h5 className="font-extrabold text-slate-900">{item.title}</h5>
+                    <p className="text-[10px] text-slate-400">{item.desc}</p>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={(notificationSettings as any)[item.key]} 
+                    onChange={(e) => setNotificationSettings({ ...notificationSettings, [item.key]: e.target.checked })} 
+                    className="w-4 h-4 accent-[#16A34A] cursor-pointer"
+                  />
+                </div>
+              ))}
+
+              <button type="submit" className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-md cursor-pointer mt-2">
+                Save Preferences
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* 6. SECURITY SETTINGS MODAL */}
+      {/* ========================================================================================= */}
+      {activeModal === 'edit_security' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-[#16A34A]" />
+              <h3 className="text-base font-extrabold text-slate-900">Security & Password</h3>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (securityForm.newPassword && securityForm.newPassword !== securityForm.confirmPassword) {
+                alert('New passwords do not match!');
+                return;
+              }
+              setActiveModal('none');
+              showToast('Security settings updated successfully!');
+            }} className="space-y-3.5 text-xs font-semibold">
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Current Password</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={securityForm.currentPassword} 
+                  onChange={(e) => setSecurityForm({ ...securityForm, currentPassword: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">New Password</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={securityForm.newPassword} 
+                  onChange={(e) => setSecurityForm({ ...securityForm, newPassword: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Confirm New Password</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={securityForm.confirmPassword} 
+                  onChange={(e) => setSecurityForm({ ...securityForm, confirmPassword: e.target.value })} 
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 font-bold focus:outline-none focus:border-[#16A34A]" 
+                  required 
+                />
+              </div>
+
+              <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h5 className="font-extrabold text-slate-900">Two-Factor Authentication (2FA)</h5>
+                  <p className="text-[10px] text-slate-400">Add an extra layer of login security</p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={securityForm.twoFactor} 
+                  onChange={(e) => setSecurityForm({ ...securityForm, twoFactor: e.target.checked })} 
+                  className="w-4 h-4 accent-[#16A34A] cursor-pointer"
+                />
+              </div>
+
+              <button type="submit" className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-md cursor-pointer mt-2">
+                Update Security Settings
+              </button>
+            </form>
           </div>
         </div>
       )}

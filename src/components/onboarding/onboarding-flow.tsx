@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle2, Award, GraduationCap, ArrowRight, ShieldCheck
+  Mail, Lock, Eye, EyeOff, User, Phone, CheckCircle2, Award, GraduationCap, ArrowRight, ShieldCheck, Printer
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -174,16 +174,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       {step === 'splash' && (
         <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-6 max-w-xl mx-auto w-full">
           {/* Printer Graphic */}
-          <div className="relative w-80 h-64 flex items-center justify-center animate-fade-in-up">
-            {/* Soft Green Backdrop behind the printer */}
-            <div className="w-52 h-52 rounded-full bg-[#edf7ed] absolute z-0 blur-[1px]"></div>
-            
-            {/* Printer illustration */}
-            <img 
-              src="/printer_illustration.jpg" 
-              alt="PrintNest Printer illustration"
-              className="relative z-10 w-full h-full object-contain mix-blend-multiply"
-            />
+          <div className="relative w-48 h-48 flex items-center justify-center animate-fade-in-up">
+            <div className="w-40 h-40 rounded-full bg-[#edf7ed] absolute z-0"></div>
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-500 to-green-600 text-white flex items-center justify-center relative z-10 shadow-xl">
+              <Printer className="w-12 h-12 stroke-[2.2]" />
+            </div>
           </div>
 
           {/* Logo Title */}
@@ -240,15 +235,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <p className="text-slate-500  text-sm mt-3.5 leading-relaxed max-w-sm">
                   Fast, reliable and high quality printing services, anytime you need.
                 </p>
-              </div>
-
-              {/* Printer Graphic */}
-              <div className="w-80 h-64 relative flex items-center justify-center self-start">
-                <img 
-                  src="/printer_illustration.jpg" 
-                  alt="Printer Illustration" 
-                  className="w-full h-full object-contain"
-                />
               </div>
 
               {/* Features footer row */}
@@ -437,15 +423,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <p className="text-slate-500  text-sm mt-3.5 leading-relaxed max-w-sm">
                   Create an account and get access to fast, reliable and high quality printing services.
                 </p>
-              </div>
-
-              {/* Printer Graphic */}
-              <div className="w-80 h-64 relative flex items-center justify-center self-start">
-                <img 
-                  src="/printer_illustration.jpg" 
-                  alt="Printer Illustration" 
-                  className="w-full h-full object-contain"
-                />
               </div>
 
               {/* Features footer row */}

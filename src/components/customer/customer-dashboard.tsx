@@ -1,0 +1,1334 @@
+'use client';
+
+import React, { useState } from 'react';
+import { 
+  Bell, Search, Plus, Home as HomeIcon, History, User, FileText, 
+  CheckCircle2, X, UploadCloud, Sparkles, ArrowRight, ArrowLeft, Image as ImageIcon,
+  Printer, BookOpen, Layers, RefreshCw, Scissors, Maximize, Wand2, 
+  Check, Trash2, Phone, MessageSquare, Download, CreditCard, Wallet, MapPin, Calendar, Clock, ShieldCheck,
+  ChevronDown, ChevronRight, Camera, Mail, Heart, Award, Ticket
+} from 'lucide-react';
+import { useAppStore } from '@/store/useAppStore';
+
+interface CustomerDashboardProps {
+  onSignOut?: () => void;
+}
+
+export default function CustomerDashboard({ onSignOut }: CustomerDashboardProps) {
+  const { user, orders, placeOrder, topUpWallet } = useAppStore();
+
+  // Master Screen Navigation Flow:
+  // 'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen'
+  const [currentScreen, setCurrentScreen] = useState<
+    'dashboard' | 'all_tools' | 'upload' | 'print_options' | 'cart' | 'payment' | 'payment_success' | 'track_order' | 'order_details' | 'profile_screen'
+  >('dashboard');
+
+  // File Upload State (Screen 1)
+  const [allowedFileType, setAllowedFileType] = useState<'all' | 'pdf' | 'image'>('all');
+  const [uploadedFile, setUploadedFile] = useState<{
+    name: string;
+    pages: number;
+    size: string;
+    type: 'pdf' | 'image';
+    previewUrl?: string;
+  } | null>({
+    name: 'Notes.pdf',
+    pages: 12,
+    size: '2.4 MB',
+    type: 'pdf'
+  });
+
+  // Print Settings State (Screen 2)
+  const [copies, setCopies] = useState(1);
+  const [printType, setPrintType] = useState<'bw' | 'color'>('bw');
+  const [paperSize, setPaperSize] = useState<'A4' | 'A3' | 'Legal' | 'Letter'>('A4');
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [printSide, setPrintSide] = useState<'single' | 'double'>('double');
+  const [binding, setBinding] = useState<'none' | 'spiral' | 'hard' | 'soft' | 'staple'>('spiral');
+  const [pageRange, setPageRange] = useState<'all' | 'custom'>('all');
+  const [customPageText, setCustomPageText] = useState('1-5, 8, 11-13');
+  const [paperQuality, setPaperQuality] = useState<'normal' | 'premium' | 'glossy'>('normal');
+  const [deliveryMethod, setDeliveryMethod] = useState<'home' | 'pickup'>('home');
+
+  // Cart & Payment States
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'upi' | 'card' | 'netbanking' | 'wallet' | 'paylater' | 'cash'>('upi');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
+
+  // Active Modals & Search
+  const [activeModal, setActiveModal] = useState<'none' | 'notifications' | 'profile' | 'admin'>('none');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Live Price Calculation Engine
+  const baseRate = printType === 'color' ? 8 : 2;
+  const pagesCount = uploadedFile ? uploadedFile.pages : 12;
+  const bindingCost = binding === 'spiral' ? 40 : binding === 'hard' ? 150 : binding === 'soft' ? 90 : binding === 'staple' ? 10 : 0;
+  const deliveryCharge = deliveryMethod === 'home' ? 10 : 0;
+  const qualityMultiplier = paperQuality === 'premium' ? 1.5 : paperQuality === 'glossy' ? 2 : 1;
+
+  const printingSubtotal = Math.round(copies * pagesCount * baseRate * qualityMultiplier);
+  const orderSubtotal = printingSubtotal + bindingCost;
+  const totalAmountBeforeDiscount = orderSubtotal + deliveryCharge;
+  const finalTotalAmount = Math.max(0, totalAmountBeforeDiscount - discountAmount);
+
+  // Apply Coupon
+  const handleApplyCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (promoCode.toUpperCase() === 'PRINTFIRST' || promoCode.toUpperCase() === 'PRINTNEST') {
+      setPromoApplied(true);
+      setDiscountAmount(10);
+    } else {
+      alert('Invalid promo code! Try "PRINTFIRST" for ₹10 off.');
+    }
+  };
+
+  // Payment Submit Handler
+  const handleCompletePayment = () => {
+    placeOrder(selectedPaymentMethod === 'wallet' ? 'wallet' : 'card', '248, Rajpur Road, Dehradun');
+    setCurrentScreen('payment_success');
+  };
+
+  // Simulated File Upload Action
+  const handleSimulateFileUpload = (type: 'pdf' | 'image') => {
+    if (type === 'pdf') {
+      setUploadedFile({
+        name: 'Notes.pdf',
+        pages: 12,
+        size: '2.4 MB',
+        type: 'pdf'
+      });
+    } else {
+      setUploadedFile({
+        name: 'Photo_Scan_HD.jpg',
+        pages: 1,
+        size: '3.1 MB',
+        type: 'image'
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#fafbfa] text-slate-800 flex flex-col font-sans select-none relative pb-24">
+      
+      {/* Container Wrapper */}
+      <div className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-8 py-6 space-y-6 text-left">
+        
+        {/* ========================================================================================= */}
+        {/* SCREEN 0: DASHBOARD (HOME SCREEN) */}
+        {/* ========================================================================================= */}
+        {currentScreen === 'dashboard' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Personalized Header */}
+            <div className="flex justify-between items-center">
+              <div className="space-y-0.5">
+                <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5 font-sans">
+                  Hi, {user?.name || 'Kaushav'} <span className="inline-block animate-bounce origin-bottom-right">👋</span>
+                </h2>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  What would you like to do today?
+                </p>
+              </div>
+
+              <div className="relative">
+                <button 
+                  onClick={() => setActiveModal('notifications')}
+                  className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 relative hover:bg-slate-50 transition-all cursor-pointer shadow-sm active:scale-95 bg-white"
+                >
+                  <Bell className="w-5 h-5 text-slate-600" />
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full border border-white animate-ping"></span>
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full border border-white"></span>
+                </button>
+              </div>
+            </div>
+
+            {/* Permanent Green Highlight Search Input */}
+            <div className="relative w-full">
+              <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search services, documents..."
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50/50 border-2 border-[#86efac] focus:border-[#16A34A] focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 text-xs font-semibold text-slate-700 placeholder:text-slate-400 transition-all shadow-xs"
+              />
+            </div>
+
+            {/* Promotional Banner Card */}
+            <div className="p-6 rounded-3xl bg-[#0f7a26] text-white relative overflow-hidden border border-emerald-600/10 shadow-md flex justify-between items-center min-h-[180px]">
+              <div className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none overflow-hidden z-0 opacity-15">
+                <svg viewBox="0 0 200 200" className="w-full h-full object-cover">
+                  <circle cx="150" cy="100" r="80" fill="none" stroke="white" strokeWidth="6" />
+                  <circle cx="150" cy="100" r="50" fill="none" stroke="white" strokeWidth="8" />
+                </svg>
+              </div>
+
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-white fill-white absolute left-[51%] top-[38%] opacity-90 animate-pulse pointer-events-none z-10">
+                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+              </svg>
+
+              <div className="space-y-4 max-w-sm relative z-10 text-left">
+                <div className="space-y-1">
+                  <h3 className="text-xl md:text-2xl font-extrabold leading-tight">
+                    Print Today,<br />Pickup Tomorrow!
+                  </h3>
+                  <p className="text-[11px] text-emerald-100 font-medium tracking-wide">
+                    Fast. Reliable. Student Friendly.
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }}
+                  className="bg-white hover:bg-slate-50 text-[#0f7a26] text-[11px] font-extrabold py-2 px-5 rounded-full transition-transform hover:scale-[1.03] shadow-md cursor-pointer active:scale-95"
+                >
+                  Order Now
+                </button>
+              </div>
+
+              <div className="hidden md:block w-72 h-44 relative shrink-0 z-10">
+                <img 
+                  src="/printer_illustration.jpg" 
+                  alt="PrintNest Studio printer"
+                  className="w-full h-full object-contain brightness-105"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
+              </div>
+            </div>
+
+            {/* All Services Grid */}
+            <div className="space-y-3.5">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-bold text-slate-800 font-sans">All Services</h4>
+                <button 
+                  onClick={() => setCurrentScreen('all_tools')}
+                  className="text-xs font-bold text-[#16A34A] hover:underline cursor-pointer"
+                >
+                  View All
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                {[
+                  { 
+                    id: 'print', 
+                    label: 'Print', 
+                    bg: 'bg-gradient-to-br from-emerald-500/10 via-emerald-500/15 to-teal-500/20 border-emerald-500/20 text-[#15803d]',
+                    action: () => { setAllowedFileType('all'); setCurrentScreen('upload'); },
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#15803d]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <path d="M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5" />
+                        <rect x="6" y="14" width="12" height="8" rx="1" fill="#15803d" fillOpacity="0.25" />
+                        <circle cx="18" cy="12" r="1" fill="#22c55e" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'binding', 
+                    label: 'Binding', 
+                    bg: 'bg-gradient-to-br from-teal-500/10 via-teal-500/15 to-cyan-500/20 border-teal-500/20 text-[#008080]',
+                    action: () => { setBinding('spiral'); setCurrentScreen('print_options'); },
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#008080]" fill="none">
+                        <rect x="7" y="3" width="13" height="18" rx="2" fill="#008080" fillOpacity="0.18" stroke="#008080" strokeWidth="1.8" />
+                        <rect x="9" y="3" width="11" height="18" rx="1" fill="#008080" />
+                        <rect x="4" y="5" width="4" height="2.2" rx="1" fill="#004d4d" />
+                        <rect x="4" y="9.5" width="4" height="2.2" rx="1" fill="#004d4d" />
+                        <rect x="4" y="14" width="4" height="2.2" rx="1" fill="#004d4d" />
+                        <rect x="4" y="18.5" width="4" height="2.2" rx="1" fill="#004d4d" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'documents', 
+                    label: 'Documents', 
+                    bg: 'bg-gradient-to-br from-blue-500/10 via-blue-500/15 to-sky-500/20 border-blue-500/20 text-[#2563eb]',
+                    action: () => setCurrentScreen('all_tools'),
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#2563eb]" fill="none">
+                        <path d="M3 7A2 2 0 0 1 5 5H9L11 7H19A2 2 0 0 1 21 9V17A2 2 0 0 1 19 19H5A2 2 0 0 1 3 17V7Z" fill="#2563eb" />
+                        <path d="M7 11H17M7 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'photo', 
+                    label: 'Photo Print', 
+                    bg: 'bg-gradient-to-br from-purple-500/10 via-purple-500/15 to-fuchsia-500/20 border-purple-500/20 text-[#7c3aed]',
+                    action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); },
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#7c3aed]" fill="none">
+                        <rect x="3" y="3" width="18" height="18" rx="4" fill="#7c3aed" fillOpacity="0.18" stroke="#7c3aed" strokeWidth="1.5" />
+                        <circle cx="8.5" cy="8.5" r="1.8" fill="#7c3aed" />
+                        <path d="M21 15L16 10L5 21" stroke="#7c3aed" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'scan', 
+                    label: 'Scan', 
+                    bg: 'bg-gradient-to-br from-sky-500/10 via-sky-500/15 to-blue-500/20 border-sky-500/20 text-[#0284c7]',
+                    action: () => setCurrentScreen('all_tools'),
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#0284c7]" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 7C4 5.89543 4.89543 5 6 5H18C19.1046 5 20 5.89543 20 7V13C20 14.1046 19.1046 15 18 15H6C4.89543 15 4 14.1046 4 13V7Z" fill="#0284c7" fillOpacity="0.2" />
+                        <path d="M2 17H22V19C22 20.1046 21.1046 21 20 21H4C2.89543 21 2 20.1046 2 19V17Z" fill="#0284c7" />
+                        <circle cx="18" cy="19" r="1" fill="white" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'editor', 
+                    label: 'Editor', 
+                    bg: 'bg-gradient-to-br from-indigo-500/10 via-indigo-500/15 to-purple-500/20 border-indigo-500/20 text-[#4f46e5]',
+                    action: () => setCurrentScreen('all_tools'),
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#4f46e5]" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6C4.89 2 4 2.89 4 4V20C4 21.1 4.89 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#4f46e5" fillOpacity="0.18" />
+                        <path d="M12 11L16 7L18 9L14 13L11 14L12 11Z" fill="#4f46e5" stroke="#4f46e5" strokeWidth="1" />
+                        <line x1="8" y1="17" x2="16" y2="17" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'resume', 
+                    label: 'Resume Builder', 
+                    bg: 'bg-gradient-to-br from-blue-500/10 via-blue-500/15 to-indigo-500/20 border-blue-500/20 text-[#2563eb]',
+                    action: () => setCurrentScreen('all_tools'),
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#2563eb]" fill="none">
+                        <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="#2563eb" />
+                        <path d="M14 2V8H20" fill="#1d4ed8" />
+                        <circle cx="12" cy="11" r="2" fill="white" />
+                        <path d="M9 16C9 14.8954 10.3431 14 12 14C13.6569 14 15 14.8954 15 16" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    )
+                  },
+                  { 
+                    id: 'more', 
+                    label: 'More', 
+                    bg: 'bg-gradient-to-br from-slate-100 via-slate-150 to-slate-200/70 border-slate-200 text-slate-600',
+                    action: () => setCurrentScreen('all_tools'),
+                    icon: (
+                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-slate-600" fill="currentColor">
+                        <circle cx="5" cy="12" r="2" />
+                        <circle cx="12" cy="12" r="2" />
+                        <circle cx="19" cy="12" r="2" />
+                      </svg>
+                    )
+                  },
+                ].map((srv) => (
+                  <div 
+                    key={srv.id}
+                    onClick={srv.action}
+                    className="p-4 border border-slate-100/90 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-[#16A34A]/40 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-95 group relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-[#16A34A] to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                    
+                    <div className={`w-12 h-12 rounded-2xl ${srv.bg} border flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 shadow-xs`}>
+                      {srv.icon}
+                    </div>
+
+                    <span className="text-[11.5px] font-extrabold text-slate-800 tracking-tight leading-none group-hover:text-[#16A34A] transition-colors">
+                      {srv.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Orders Section */}
+            <div className="space-y-3.5">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-bold text-slate-800 font-sans">Recent Orders</h4>
+                <button 
+                  onClick={() => setCurrentScreen('track_order')}
+                  className="text-xs font-bold text-[#16A34A] hover:underline cursor-pointer"
+                >
+                  View All
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+                <div 
+                  onClick={() => setCurrentScreen('track_order')}
+                  className="p-4 border border-slate-100 rounded-2xl bg-white flex items-center justify-between gap-4 flex-1 cursor-pointer hover:border-emerald-500/30 transition-all hover:shadow-md active:scale-95"
+                >
+                  <div className="flex items-center gap-3.5 max-w-[70%]">
+                    <div className="w-11 h-11 bg-rose-50 border border-rose-100 rounded-xl flex flex-col items-center justify-center shrink-0 text-rose-600 font-extrabold text-[9px] leading-none space-y-0.5">
+                      <FileText className="w-4 h-4 text-rose-500 fill-rose-500/20" />
+                      <span className="bg-rose-500 text-white text-[7px] px-1 py-[0.5px] rounded font-mono font-bold">PDF</span>
+                    </div>
+                    
+                    <div className="text-left leading-tight">
+                      <span className="text-xs font-extrabold text-slate-900 font-mono block">
+                        PRT00054
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium block mt-1">
+                        12 May 2024
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right leading-none shrink-0 space-y-1.5">
+                    <span className="text-[10px] font-bold text-[#16A34A] bg-emerald-50 py-0.5 px-2 rounded-full inline-block">
+                      In Progress
+                    </span>
+                    <span className="text-xs font-extrabold text-slate-800 font-mono block mt-1">
+                      ₹216.00
+                    </span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }}
+                  className="w-full sm:w-28 min-h-[64px] border-2 border-dashed border-slate-200 hover:border-[#16A34A] rounded-2xl flex items-center justify-center text-slate-400 hover:text-[#16A34A] transition-colors cursor-pointer shrink-0 active:scale-95 bg-white"
+                >
+                  <Plus className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================================= */}
+        {/* SCREEN: MY PROFILE (MATCHING REFERENCE IMAGE EXACTLY) */}
+        {/* ========================================================================================= */}
+        {currentScreen === 'profile_screen' && (
+          <div className="space-y-6 animate-fade-in text-left">
+            {/* My Profile Header */}
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900 font-sans">My Profile</h2>
+                <p className="text-xs text-slate-400 font-medium">Manage your account and preferences</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setActiveModal('notifications')}
+                  className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 relative hover:bg-slate-50 bg-white"
+                >
+                  <Bell className="w-5 h-5 text-slate-600" />
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full border border-white"></span>
+                </button>
+
+                <div className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full border border-slate-200 bg-white shadow-xs">
+                  <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-extrabold flex items-center justify-center text-xs overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Kaushav" className="w-full h-full object-cover" />
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Top Profile Summary Banner Card */}
+            <div className="p-6 border border-slate-100 rounded-3xl bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
+              {/* Left: Avatar + Details */}
+              <div className="flex items-center gap-5">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full border-4 border-slate-100 overflow-hidden shadow-xs">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80" alt="Kaushav Sharma" className="w-full h-full object-cover" />
+                  </div>
+                  <button className="absolute bottom-0 right-0 w-7 h-7 bg-white text-[#16A34A] rounded-full border border-slate-200 flex items-center justify-center shadow-xs hover:bg-emerald-50 cursor-pointer">
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-extrabold text-slate-900">Kaushav Sharma</h3>
+                    <span className="text-[10px] font-bold text-[#16A34A] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                      Verified ✓
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" /> kaushav@example.com
+                  </p>
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" /> +91 98765 43210
+                  </p>
+                  <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> Dehradun, Uttarakhand, India
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: 3 Metric Cards */}
+              <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                <div className="text-center space-y-1 px-3">
+                  <div className="w-10 h-10 bg-emerald-50 text-[#16A34A] rounded-2xl flex items-center justify-center mx-auto">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <span className="text-base font-extrabold text-slate-900 block font-mono">24</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Orders</span>
+                </div>
+
+                <div className="h-10 w-px bg-slate-100"></div>
+
+                <div className="text-center space-y-1 px-3">
+                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+                    <Heart className="w-5 h-5 fill-current" />
+                  </div>
+                  <span className="text-base font-extrabold text-slate-900 block font-mono">120</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">PrintNest Credits</span>
+                </div>
+
+                <div className="h-10 w-px bg-slate-100"></div>
+
+                <div className="text-center space-y-1 px-3">
+                  <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mx-auto">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <span className="text-base font-extrabold text-slate-900 block font-sans">Silver</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Membership</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom 2 Column Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Account Settings List (Left Column) */}
+              <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 shadow-sm">
+                <h4 className="text-sm font-extrabold text-slate-900">Account Settings</h4>
+
+                <div className="space-y-1">
+                  {[
+                    { title: 'Personal Information', desc: 'Update your name, email and phone number', icon: User },
+                    { title: 'Addresses', desc: 'Manage your delivery addresses', icon: MapPin },
+                    { title: 'Payment Methods', desc: 'Add or manage your payment methods', icon: CreditCard },
+                    { title: 'Print Preferences', desc: 'Set your default print settings', icon: Printer },
+                    { title: 'Notifications', desc: 'Manage your notification preferences', icon: Bell },
+                    { title: 'Security', desc: 'Change password and security settings', icon: ShieldCheck },
+                  ].map((item, i) => (
+                    <div 
+                      key={i} 
+                      onClick={() => alert(`Opened ${item.title}`)}
+                      className="p-3 rounded-2xl hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors group"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 bg-emerald-50 text-[#16A34A] rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <item.icon className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <h5 className="text-xs font-extrabold text-slate-900 group-hover:text-[#16A34A] transition-colors">{item.title}</h5>
+                          <p className="text-[10.5px] text-slate-400 font-medium">{item.desc}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Wallet & Recent Orders (Right Column) */}
+              <div className="space-y-6">
+                
+                {/* My Wallet Box */}
+                <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 text-left shadow-sm">
+                  <h4 className="text-sm font-extrabold text-slate-900">My Wallet</h4>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-emerald-100 text-[#16A34A] rounded-xl flex items-center justify-center">
+                          <Wallet className="w-4.5 h-4.5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold block">PrintNest Credits</span>
+                          <span className="text-base font-extrabold text-slate-900 font-mono">120</span>
+                        </div>
+                      </div>
+                      <button onClick={() => topUpWallet(500)} className="w-full py-2 border border-[#16A34A] text-[#16A34A] hover:bg-emerald-50 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                        + Add Credits
+                      </button>
+                    </div>
+
+                    <div className="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center">
+                          <Ticket className="w-4.5 h-4.5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold block">Offers & Rewards</span>
+                          <span className="text-base font-extrabold text-slate-900 font-mono">5</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setActiveModal('notifications')} className="w-full py-2 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                        View Rewards
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Orders Box */}
+                <div className="p-6 border border-slate-100 rounded-3xl bg-white space-y-4 text-left shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-extrabold text-slate-900">Recent Orders</h4>
+                    <button onClick={() => setCurrentScreen('track_order')} className="text-xs font-bold text-[#16A34A] hover:underline">View All</button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {[
+                      { id: 'PRT00054', date: '12 May 2024', status: 'In Progress', statusColor: 'text-[#16A34A] bg-emerald-50', amount: '₹216.00' },
+                      { id: 'PRT00053', date: '10 May 2024', status: 'Delivered', statusColor: 'text-[#16A34A] bg-emerald-50', amount: '₹128.00' },
+                      { id: 'PRT00052', date: '08 May 2024', status: 'Delivered', statusColor: 'text-[#16A34A] bg-emerald-50', amount: '₹85.00' },
+                    ].map((ord) => (
+                      <div key={ord.id} onClick={() => setCurrentScreen('track_order')} className="p-3 rounded-2xl hover:bg-slate-50 flex items-center justify-between cursor-pointer group">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-extrabold text-slate-900 group-hover:text-[#16A34A]">{ord.id}</h5>
+                            <span className="text-[10px] text-slate-400 font-medium">{ord.date}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${ord.statusColor}`}>{ord.status}</span>
+                          <span className="text-xs font-extrabold font-mono text-slate-900">{ord.amount}</span>
+                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={() => setCurrentScreen('track_order')} className="w-full text-center text-xs font-bold text-[#16A34A] hover:underline pt-2">
+                    View All Orders →
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Other screens (all_tools, upload, print_options, cart, payment, payment_success, track_order, order_details) */}
+        {currentScreen === 'all_tools' && (
+          <div className="space-y-7 animate-fade-in">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setCurrentScreen('dashboard')}
+                  className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                  All Tools
+                </h2>
+              </div>
+
+              <button 
+                onClick={() => setActiveModal('notifications')}
+                className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 relative hover:bg-slate-50 cursor-pointer bg-white"
+              >
+                <Bell className="w-5 h-5 text-slate-600" />
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-emerald-500 rounded-full border border-white"></span>
+              </button>
+            </div>
+
+            {/* Document Tools */}
+            <div className="space-y-3.5 text-left">
+              <h3 className="text-sm font-extrabold text-slate-800">Document Tools</h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                {[
+                  { label: 'Print PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
+                  { label: 'Image to PDF', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Compress PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
+                  { label: 'Merge PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
+                  { label: 'Split PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
+                  { label: 'Crop PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
+                  { label: 'Rotate PDF', action: () => { setAllowedFileType('pdf'); setCurrentScreen('upload'); } },
+                  { label: 'More', action: () => { setAllowedFileType('all'); setCurrentScreen('upload'); } },
+                ].map((t, idx) => (
+                  <div key={idx} onClick={t.action} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-blue-400/40 hover:shadow-md transition-all active:scale-95">
+                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-700 leading-tight">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Image Tools */}
+            <div className="space-y-3.5 text-left">
+              <h3 className="text-sm font-extrabold text-slate-800">Image Tools</h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                {[
+                  { label: 'Print Image', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Resize', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Rotate', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Filter', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Enhance', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Background', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'Scan', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                  { label: 'More', action: () => { setAllowedFileType('image'); setCurrentScreen('upload'); } },
+                ].map((t, idx) => (
+                  <div key={idx} onClick={t.action} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-emerald-400/40 hover:shadow-md transition-all active:scale-95">
+                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+                      <ImageIcon className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-700 leading-tight">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Convert Tools */}
+            <div className="space-y-3.5 text-left">
+              <h3 className="text-sm font-extrabold text-slate-800">Convert Tools</h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-blue-400/40 hover:shadow-md transition-all active:scale-95">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-extrabold text-sm font-sans shadow-sm">W</div>
+                  <span className="text-[11px] font-bold text-slate-700 leading-tight">Word to PDF</span>
+                </div>
+                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-orange-400/40 hover:shadow-md transition-all active:scale-95">
+                  <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white font-extrabold text-sm font-sans shadow-sm">P</div>
+                  <span className="text-[11px] font-bold text-slate-700 leading-tight">PDF to PPT</span>
+                </div>
+                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-emerald-400/40 hover:shadow-md transition-all active:scale-95">
+                  <div className="w-10 h-10 bg-emerald-700 rounded-xl flex items-center justify-center text-white font-extrabold text-sm font-sans shadow-sm">X</div>
+                  <span className="text-[11px] font-bold text-slate-700 leading-tight">Excel to PDF</span>
+                </div>
+                <div onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }} className="p-4 border border-slate-100 rounded-2xl bg-white flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-slate-300 transition-all active:scale-95">
+                  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 font-bold">...</div>
+                  <span className="text-[11px] font-bold text-slate-700 leading-tight">More</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentScreen === 'upload' && (
+          <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <button 
+                onClick={() => setCurrentScreen('all_tools')}
+                className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                  Upload Document
+                </h2>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  {allowedFileType === 'pdf' ? 'Supports PDF files only' : allowedFileType === 'image' ? 'Supports JPG, PNG, JPEG images' : 'Support PDF • JPG • PNG • JPEG • DOCX'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-8 border-2 border-dashed border-slate-200 hover:border-[#16A34A] rounded-3xl bg-white text-center space-y-4 transition-all">
+              <div className="w-16 h-16 bg-emerald-50 text-[#16A34A] rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                <UploadCloud className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-sm font-extrabold text-slate-800">Drag & Drop Files Here</h4>
+                <p className="text-xs text-slate-400">or choose from your local device storage</p>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button 
+                  onClick={() => handleSimulateFileUpload('pdf')}
+                  className="bg-[#16A34A] hover:bg-emerald-700 text-white py-2.5 px-5 rounded-xl font-extrabold text-xs shadow-sm cursor-pointer transition-all active:scale-95"
+                >
+                  Choose File (PDF)
+                </button>
+                <button 
+                  onClick={() => handleSimulateFileUpload('image')}
+                  className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 px-5 rounded-xl font-extrabold text-xs cursor-pointer transition-all active:scale-95"
+                >
+                  Browse Image (JPG/PNG)
+                </button>
+                <button 
+                  onClick={() => handleSimulateFileUpload('image')}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-4 rounded-xl font-extrabold text-xs cursor-pointer"
+                >
+                  Use Camera
+                </button>
+              </div>
+            </div>
+
+            {uploadedFile && (
+              <div className="p-4 border border-slate-200 rounded-2xl bg-white flex items-center justify-between gap-4 shadow-sm animate-fade-in-up">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 bg-rose-50 text-rose-500 rounded-xl flex flex-col items-center justify-center shrink-0 border border-rose-100">
+                    {uploadedFile.type === 'pdf' ? (
+                      <FileText className="w-5 h-5 fill-current opacity-85" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-emerald-600" />
+                    )}
+                  </div>
+
+                  <div>
+                    <h5 className="text-xs font-extrabold text-slate-900">{uploadedFile.name}</h5>
+                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                      {uploadedFile.pages} Pages • {uploadedFile.size}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4 stroke-[3]" />
+                </div>
+              </div>
+            )}
+
+            <button
+              disabled={!uploadedFile}
+              onClick={() => setCurrentScreen('print_options')}
+              className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md cursor-pointer disabled:opacity-50 transition-all active:scale-[0.99]"
+            >
+              Continue to Print Settings →
+            </button>
+          </div>
+        )}
+
+        {currentScreen === 'print_options' && (
+          <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <button 
+                onClick={() => setCurrentScreen('upload')}
+                className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                  Print Options
+                </h2>
+                <p className="text-[11px] text-slate-400 font-medium">Configure print modes, copies, paper quality & delivery</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 border border-slate-100 rounded-2xl bg-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-extrabold text-slate-900">{uploadedFile?.name || 'Notes.pdf'}</h5>
+                  <span className="text-[10px] text-slate-400">{pagesCount} Pages • {uploadedFile?.size || '2.4 MB'}</span>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-[#16A34A] bg-emerald-50 px-2.5 py-1 rounded-lg">Verified</span>
+            </div>
+
+            <div className="space-y-4 text-xs font-semibold">
+              <div className="flex items-center justify-between p-3.5 border border-slate-100 rounded-2xl bg-white">
+                <span className="font-extrabold text-slate-800">Copies</span>
+                <div className="flex items-center gap-3 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                  <button onClick={() => setCopies(Math.max(1, copies - 1))} className="w-8 h-8 rounded-lg bg-white border text-slate-700 font-extrabold flex items-center justify-center text-sm shadow-xs cursor-pointer">-</button>
+                  <span className="w-6 text-center font-extrabold font-mono text-sm">{copies}</span>
+                  <button onClick={() => setCopies(copies + 1)} className="w-8 h-8 rounded-lg bg-white border text-slate-700 font-extrabold flex items-center justify-center text-sm shadow-xs cursor-pointer">+</button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 uppercase font-bold block">Print Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setPrintType('bw')} className={`p-3 rounded-xl border font-bold text-center transition-all cursor-pointer ${printType === 'bw' ? 'border-[#16A34A] bg-emerald-50 text-[#16A34A]' : 'border-slate-200 bg-white text-slate-700'}`}>Black & White (₹2/p)</button>
+                  <button onClick={() => setPrintType('color')} className={`p-3 rounded-xl border font-bold text-center transition-all cursor-pointer ${printType === 'color' ? 'border-[#16A34A] bg-emerald-50 text-[#16A34A]' : 'border-slate-200 bg-white text-slate-700'}`}>Colour (₹8/p)</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Paper Size</label>
+                  <select value={paperSize} onChange={(e) => setPaperSize(e.target.value as any)} className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-bold focus:outline-none">
+                    <option value="A4">A4 (Standard)</option>
+                    <option value="A3">A3 (Poster Size)</option>
+                    <option value="Legal">Legal</option>
+                    <option value="Letter">Letter</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Orientation</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button onClick={() => setOrientation('portrait')} className={`p-2.5 rounded-xl border text-center font-bold ${orientation === 'portrait' ? 'border-[#16A34A] bg-emerald-50 text-[#16A34A]' : 'border-slate-200 bg-white'}`}>Portrait</button>
+                    <button onClick={() => setOrientation('landscape')} className={`p-2.5 rounded-xl border text-center font-bold ${orientation === 'landscape' ? 'border-[#16A34A] bg-emerald-50 text-[#16A34A]' : 'border-slate-200 bg-white'}`}>Landscape</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-slate-400 uppercase font-bold block">Binding Style</label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-[11px]">
+                  {[
+                    { id: 'none', label: 'No Binding' },
+                    { id: 'spiral', label: 'Spiral (₹40)' },
+                    { id: 'soft', label: 'Soft (₹90)' },
+                    { id: 'hard', label: 'Hard (₹150)' },
+                    { id: 'staple', label: 'Staple (₹10)' }
+                  ].map((b) => (
+                    <button 
+                      key={b.id} 
+                      onClick={() => setBinding(b.id as any)} 
+                      className={`p-2.5 rounded-xl border font-bold text-center transition-all cursor-pointer ${binding === b.id ? 'border-[#16A34A] bg-emerald-50 text-[#16A34A]' : 'border-slate-200 bg-white text-slate-700'}`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl flex justify-between items-center">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Estimated Price</span>
+                  <span className="text-xl font-extrabold text-[#16A34A] font-mono">₹{printingSubtotal + bindingCost}.00</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Delivery</span>
+                  <span className="text-xs font-bold text-slate-700">Tomorrow, 12PM - 4PM</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setCurrentScreen('cart')}
+                className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md cursor-pointer transition-all active:scale-[0.99]"
+              >
+                Add to Cart →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentScreen === 'cart' && (
+          <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setCurrentScreen('print_options')}
+                  className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                  Cart (Review Order)
+                </h2>
+              </div>
+            </div>
+
+            <div className="p-4 border border-slate-200 rounded-2xl bg-white flex items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-xl flex flex-col items-center justify-center shrink-0 border border-rose-100">
+                  <FileText className="w-5 h-5 fill-current opacity-85" />
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900">{uploadedFile?.name || 'Notes.pdf'}</h4>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">
+                    {pagesCount} Pages • Copies: {copies} • {printType === 'color' ? 'Color' : 'B&W'} • {binding.toUpperCase()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-sm font-extrabold text-slate-900 font-mono block">₹{orderSubtotal}.00</span>
+                <button onClick={() => setCurrentScreen('print_options')} className="text-[10px] text-slate-400 hover:text-rose-500 font-bold underline mt-1">Edit</button>
+              </div>
+            </div>
+
+            <div className="p-5 border border-slate-100 rounded-2xl bg-white space-y-2.5 text-xs font-semibold">
+              <div className="flex justify-between text-slate-600">
+                <span>Printing Subtotal:</span>
+                <span className="font-mono">₹{printingSubtotal}.00</span>
+              </div>
+              {bindingCost > 0 && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Binding Charge ({binding}):</span>
+                  <span className="font-mono">₹{bindingCost}.00</span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-600">
+                <span>Delivery Charge:</span>
+                <span className="font-mono">₹{deliveryCharge}.00</span>
+              </div>
+
+              {promoApplied && (
+                <div className="flex justify-between text-[#16A34A]">
+                  <span>Promo Discount (PRINTFIRST):</span>
+                  <span className="font-mono">-₹10.00</span>
+                </div>
+              )}
+
+              <div className="border-t border-slate-200 pt-2.5 flex justify-between text-slate-900 text-sm font-extrabold">
+                <span>Total Amount:</span>
+                <span className="font-mono text-[#16A34A]">₹{finalTotalAmount}.00</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => setCurrentScreen('payment')}
+                className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md cursor-pointer transition-all active:scale-[0.99]"
+              >
+                Proceed to Checkout →
+              </button>
+
+              <button
+                onClick={() => setCurrentScreen('dashboard')}
+                className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-700 py-1"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentScreen === 'payment' && (
+          <div className="space-y-6 max-w-xl mx-auto animate-fade-in text-left">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <button 
+                onClick={() => setCurrentScreen('cart')}
+                className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                Payment Checkout
+              </h2>
+            </div>
+
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl flex justify-between items-center">
+              <span className="text-xs font-extrabold text-slate-700">Total Amount Payable</span>
+              <span className="text-xl font-extrabold text-[#16A34A] font-mono">₹{finalTotalAmount}.00</span>
+            </div>
+
+            <form onSubmit={handleApplyCoupon} className="flex gap-2">
+              <input 
+                type="text" 
+                value={promoCode} 
+                onChange={(e) => setPromoCode(e.target.value)} 
+                placeholder="Enter Promo Code (e.g. PRINTFIRST)" 
+                className="flex-1 p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold uppercase placeholder:normal-case focus:outline-none"
+              />
+              <button type="submit" className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold px-4 rounded-xl cursor-pointer">
+                Apply
+              </button>
+            </form>
+
+            <div className="space-y-3">
+              <label className="text-[10px] text-slate-400 uppercase font-bold block">Choose a Payment Method</label>
+
+              {[
+                { id: 'upi', label: 'UPI (Google Pay, PhonePe, Paytm)', icon: '🟢' },
+                { id: 'card', label: 'Credit / Debit Card', icon: '💳' },
+                { id: 'netbanking', label: 'Net Banking (All Banks)', icon: '🏦' },
+                { id: 'wallet', label: `Wallet Balance (₹${user?.walletBalance || 1250})`, icon: '👛' },
+                { id: 'paylater', label: 'Pay Later (Pay in 30 days)', icon: '⏳' },
+                { id: 'cash', label: 'Cash on Pickup', icon: '💵' },
+              ].map((method) => (
+                <div
+                  key={method.id}
+                  onClick={() => setSelectedPaymentMethod(method.id as any)}
+                  className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition-all ${selectedPaymentMethod === method.id ? 'border-[#16A34A] bg-emerald-50/50 shadow-xs' : 'border-slate-100 bg-white'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{method.icon}</span>
+                    <span className="text-xs font-bold text-slate-800">{method.label}</span>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPaymentMethod === method.id ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300'}`}>
+                    {selectedPaymentMethod === method.id && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-center gap-4 text-[10px] font-bold text-slate-400 pt-2">
+              <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-[#16A34A]" /> Secured by Razorpay</span>
+              <span>• 256-Bit SSL</span>
+            </div>
+
+            <button
+              onClick={handleCompletePayment}
+              className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md cursor-pointer transition-all active:scale-[0.99]"
+            >
+              Pay ₹{finalTotalAmount}.00
+            </button>
+          </div>
+        )}
+
+        {currentScreen === 'payment_success' && (
+          <div className="space-y-6 max-w-md mx-auto py-8 animate-fade-in text-center">
+            <div className="relative w-20 h-20 bg-emerald-50 text-[#16A34A] rounded-full flex items-center justify-center mx-auto shadow-md">
+              <CheckCircle2 className="w-11 h-11 stroke-[2.2] animate-bounce" />
+              <div className="absolute -top-1 -right-1 text-emerald-500 animate-ping">✨</div>
+            </div>
+
+            <div className="space-y-1.5">
+              <h2 className="text-2xl font-extrabold text-slate-900">Payment Successful!</h2>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Your order has been placed successfully. You will receive real-time printing updates shortly.
+              </p>
+            </div>
+
+            <div className="p-4 bg-white border border-slate-100 rounded-2xl text-left text-xs font-semibold space-y-2">
+              <div className="flex justify-between text-slate-500">
+                <span>Order ID:</span>
+                <span className="font-mono font-extrabold text-slate-900">PRT00054</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Transaction ID:</span>
+                <span className="font-mono font-bold text-slate-700">TXN99823410</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Amount Paid:</span>
+                <span className="font-mono font-extrabold text-[#16A34A]">₹{finalTotalAmount}.00</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Estimated Delivery:</span>
+                <span className="font-bold text-slate-800">Tomorrow, 2PM - 4PM</span>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() => setCurrentScreen('track_order')}
+                className="w-full bg-[#16A34A] hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold text-sm shadow-md cursor-pointer transition-all active:scale-[0.99]"
+              >
+                Track Order
+              </button>
+
+              <button
+                onClick={() => setCurrentScreen('dashboard')}
+                className="w-full text-center text-xs font-bold text-slate-500 hover:text-slate-700 py-1"
+              >
+                Go to Home
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(currentScreen === 'track_order' || currentScreen === 'order_details') && (
+          <div className="space-y-6 max-w-md mx-auto animate-fade-in text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setCurrentScreen('dashboard')}
+                  className="p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors text-slate-700 cursor-pointer bg-white"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900 font-sans">
+                    {currentScreen === 'track_order' ? 'Track Order' : 'Order Details'}
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-medium">Order #PRT00054 • Placed on 12 May 2024</p>
+                </div>
+              </div>
+
+              <span className="text-xs font-extrabold text-[#16A34A] bg-emerald-50 px-2.5 py-1 rounded-lg">₹{finalTotalAmount}.00</span>
+            </div>
+
+            {currentScreen === 'track_order' && (
+              <div className="space-y-6">
+                <div className="p-5 border border-slate-100 rounded-2xl bg-white space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Live Status Timeline</h4>
+
+                  <div className="relative pl-6 space-y-5 border-l-2 border-slate-100">
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-[#16A34A] text-white flex items-center justify-center text-[10px]">✓</div>
+                      <h5 className="text-xs font-bold text-slate-900">Order Received</h5>
+                      <span className="text-[10px] text-slate-400 block">12 May 2024, 9:30 AM</span>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-[#16A34A] text-white flex items-center justify-center text-[10px]">✓</div>
+                      <h5 className="text-xs font-bold text-slate-900">Printing Started</h5>
+                      <span className="text-[10px] text-slate-400 block">12 May 2024, 11:00 AM</span>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-[#16A34A] text-white flex items-center justify-center text-[10px]">✓</div>
+                      <h5 className="text-xs font-bold text-slate-900">Spiral Binding Completed</h5>
+                      <span className="text-[10px] text-slate-400 block">12 May 2024, 02:15 PM</span>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-[#16A34A] text-white flex items-center justify-center text-[10px]">✓</div>
+                      <h5 className="text-xs font-bold text-slate-900">Ready for Pickup / Delivery</h5>
+                      <span className="text-[10px] text-slate-400 block">12 May 2024, 04:30 PM</span>
+                    </div>
+
+                    <div className="relative opacity-60">
+                      <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[10px]">○</div>
+                      <h5 className="text-xs font-bold text-slate-700">Out for Delivery</h5>
+                      <span className="text-[10px] text-slate-400 block">Pending dispatch</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-white rounded-2xl border border-slate-100 flex justify-between text-xs font-semibold">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Delivery Type</span>
+                    <span className="text-slate-800">Home Delivery</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Delivery Time</span>
+                    <span className="text-slate-800">Tomorrow, 2PM - 4PM</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setCurrentScreen('order_details')} className="bg-[#16A34A] text-white py-3 rounded-xl font-extrabold text-xs text-center">
+                    View Order Details
+                  </button>
+                  <button onClick={() => alert('Support line: +91 98765 43210')} className="bg-slate-100 text-slate-700 py-3 rounded-xl font-extrabold text-xs text-center">
+                    Contact Support
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {currentScreen === 'order_details' && (
+              <div className="space-y-4 text-xs font-semibold">
+                <div className="p-4 border border-slate-100 rounded-2xl bg-white space-y-2">
+                  <h4 className="text-[10px] uppercase font-bold text-slate-400">Order Items</h4>
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-slate-900">{uploadedFile?.name || 'Notes.pdf'} ({pagesCount} Pages)</span>
+                    <span className="font-mono font-bold">₹{orderSubtotal}.00</span>
+                  </div>
+                </div>
+
+                <div className="p-4 border border-slate-100 rounded-2xl bg-white space-y-1.5">
+                  <h4 className="text-[10px] uppercase font-bold text-slate-400">Delivery Address</h4>
+                  <p className="font-bold text-slate-800">Kaushav</p>
+                  <p className="text-slate-500">248, Rajpur Road, Dehradun, Uttarakhand - 248001</p>
+                </div>
+
+                <button onClick={() => setCurrentScreen('track_order')} className="w-full bg-[#16A34A] text-white py-3.5 rounded-2xl font-extrabold text-xs text-center">
+                  Back to Order Tracking
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+
+      {/* Bottom Nav Bar */}
+      <nav className="fixed bottom-0 inset-x-0 h-14 bg-white border-t border-slate-100 flex justify-around items-center z-30 select-none shadow-lg">
+        <button
+          onClick={() => setCurrentScreen('dashboard')}
+          className={`flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl cursor-pointer ${currentScreen === 'dashboard' ? 'text-[#16A34A] font-bold' : 'text-slate-400'}`}
+        >
+          <HomeIcon className="w-4.5 h-4.5 shrink-0 fill-current" />
+          <span className="text-[8px] font-extrabold tracking-wide uppercase leading-none">Home</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentScreen('track_order')}
+          className={`flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl cursor-pointer ${currentScreen === 'track_order' || currentScreen === 'order_details' ? 'text-[#16A34A] font-bold' : 'text-slate-400'}`}
+        >
+          <History className="w-4.5 h-4.5 shrink-0" />
+          <span className="text-[8px] font-extrabold tracking-wide uppercase leading-none">Orders</span>
+        </button>
+
+        <button
+          onClick={() => { setAllowedFileType('all'); setCurrentScreen('upload'); }}
+          className="flex flex-col items-center justify-center w-11 h-11 rounded-full bg-[#16A34A] text-white -translate-y-3 shadow-lg active:scale-95 transition-all cursor-pointer"
+          title="Configure Printing"
+        >
+          <Plus className="w-5.5 h-5.5 shrink-0" />
+        </button>
+
+        <button
+          onClick={() => setActiveModal('notifications')}
+          className="flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+        >
+          <Bell className="w-4.5 h-4.5 shrink-0" />
+          <span className="text-[8px] font-extrabold tracking-wide uppercase leading-none">Notifications</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentScreen('profile_screen')}
+          className={`flex flex-col items-center justify-center gap-1 w-12 h-12 rounded-xl cursor-pointer ${currentScreen === 'profile_screen' ? 'text-[#16A34A] font-bold' : 'text-slate-400'}`}
+        >
+          <User className="w-4.5 h-4.5 shrink-0 fill-current" />
+          <span className="text-[8px] font-extrabold tracking-wide uppercase leading-none">Profile</span>
+        </button>
+      </nav>
+
+      {/* Notifications Modal */}
+      {activeModal === 'notifications' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 text-left border border-slate-100 relative">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+            <div className="flex items-center gap-2"><Bell className="w-5 h-5 text-[#16A34A]" /><h3 className="text-base font-bold text-slate-900">Alerts & Notifications</h3></div>
+            <div className="space-y-2.5">
+              <div className="p-3 bg-slate-50 rounded-2xl border text-xs"><span className="font-bold text-slate-800">🎉 Order Delivered!</span><p className="text-[10px] text-slate-500">Order #PRN-6582 binding finalized.</p></div>
+              <div className="p-3 bg-slate-50 rounded-2xl border text-xs"><span className="font-bold text-slate-800">⚙️ Printing Progress</span><p className="text-[10px] text-slate-500">Order #PRT00054 is currently printing.</p></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN PANEL CONSOLE MODAL */}
+      {activeModal === 'admin' && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-xl w-full shadow-2xl space-y-5 text-left border border-slate-100 relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setActiveModal('none')} className="absolute right-5 top-5 text-slate-400 font-bold text-sm">✕</button>
+
+            <div>
+              <span className="text-[10px] font-extrabold text-[#16A34A] uppercase tracking-wider">PLATFORM ADMINISTRATION</span>
+              <h3 className="text-lg font-extrabold text-slate-900">Administrator Console</h3>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <span className="text-[10px] text-emerald-600 font-bold block">Estimated Revenue</span>
+                <span className="text-base font-extrabold text-emerald-900 font-mono">₹48,250</span>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100">
+                <span className="text-[10px] text-blue-600 font-bold block">Deliveries Completed</span>
+                <span className="text-base font-extrabold text-blue-900 font-mono">142</span>
+              </div>
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100">
+                <span className="text-[10px] text-amber-600 font-bold block">Active Printers</span>
+                <span className="text-base font-extrabold text-amber-900 font-mono">3 Online</span>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100">
+                <span className="text-[10px] text-purple-600 font-bold block">Platform Users</span>
+                <span className="text-base font-extrabold text-purple-900 font-mono">1,280</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-800">Weekly Gross Revenue (INR)</span>
+                <span className="text-[10px] font-bold text-[#16A34A] bg-emerald-100 px-2 py-0.5 rounded-full">+14.8% MoM</span>
+              </div>
+              <div className="h-28 w-full">
+                <svg viewBox="0 0 300 100" className="w-full h-full">
+                  <path d="M0,80 Q50,40 100,60 T200,20 T300,50 L300,100 L0,100 Z" fill="rgba(22, 163, 74, 0.15)" />
+                  <path d="M0,80 Q50,40 100,60 T200,20 T300,50" fill="none" stroke="#16A34A" strokeWidth="3" />
+                  <circle cx="200" cy="20" r="4" fill="#16A34A" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-900 text-emerald-400 rounded-2xl font-mono text-[10px] space-y-1">
+              <p>11:45:00 AM - System initialized.</p>
+              <p>11:46:12 AM - InkJet Pro Studio: Order #PRT00054 printing started.</p>
+              <p>11:47:05 AM - Razorpay webhook: Payment TXN99823410 verified (₹36.00).</p>
+            </div>
+
+            <button onClick={() => alert('GST Invoice report compiled!')} className="w-full bg-[#16A34A] text-white py-3 rounded-xl font-extrabold text-xs shadow-md">
+              Download GST Tax Invoices (CSV/PDF)
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
